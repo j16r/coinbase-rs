@@ -85,8 +85,22 @@ impl<A> Public<A> {
     }
 }
 
+type DateTime = chrono::DateTime<chrono::Utc>;
+
 #[derive(Deserialize, Debug)]
 pub struct Response {
-    pub pagination: String,
+    pub pagination: Pagination,
     pub data: serde_json::Value,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Pagination {
+    pub ending_before: Option<DateTime>,
+    pub starting_after: Option<DateTime>,
+    pub previous_ending_before: Option<DateTime>,
+    pub next_starting_after: Option<DateTime>,
+    pub limit: usize,
+    pub order: String,
+    pub previous_uri: String,
+    pub next_uri: String,
 }
