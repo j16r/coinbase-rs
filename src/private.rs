@@ -73,7 +73,13 @@ impl<A> Private<A> {
         req.method(&method);
         req.uri(&uri);
 
-        let sign = Self::sign(&self.secret, timestamp, method, &uri.path(), &body_str);
+        let sign = Self::sign(
+            &self.secret,
+            timestamp,
+            method,
+            &uri.path_and_query().unwrap().as_str(),
+            &body_str,
+        );
 
         req.header("User-Agent", Public::<A>::USER_AGENT);
         req.header("Content-Type", "Application/JSON");
