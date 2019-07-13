@@ -112,21 +112,26 @@ impl<A> Private<A> {
 
 #[derive(Deserialize, Debug)]
 pub struct Account {
+    // id appears to be either a UUID or a token name e.g: "LINK"
     pub id: String,
+
+    pub r#type: String,
+
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+
+    pub resource: String,
+    pub resource_path: String,
+
+    pub name: String,
+    pub primary: bool,
+
+    pub currency: Currency,
+
+    pub balance: Balance,
 
     pub allow_deposits: bool,
     pub allow_withdrawals: bool,
-    pub balance: Balance,
-    pub created_at: Option<DateTime<Utc>>,
-    pub currency: String,
-
-    pub name: String,
-    pub native_balance: Balance,
-    pub primary: bool,
-    pub resource: String,
-    pub resource_path: String,
-    pub r#type: String,
-    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -136,34 +141,156 @@ pub struct Balance {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct AccountHistory {
-    pub id: String,
+pub struct Transaction {
+    pub id: Uuid,
+
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+
+    pub r#type: String,
+    pub resource: String,
+    pub resource_path: String,
+    pub status: String,
+    pub amount: Balance,
+    pub native_amount: Balance,
+    pub instant_exchange: bool,
+    pub network: Option<Network>,
+    pub from: Option<From>,
+    pub details: TransactionDetails,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Network {
+    pub status: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct From {
+    pub id: Option<Uuid>,
+    pub resource: String,
+    pub resource_path: Option<String>,
+    pub currency: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TransactionDetails {
+    pub title: String,
+    pub subtitle: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Currency {
+    pub code: String,
+    pub name: String,
+    pub color: String,
+    pub sort_index: usize,
+    pub exponent: usize,
+    pub r#type: String,
+    pub address_regex: Option<String>,
+    pub asset_id: Option<Uuid>,
+    pub destination_tag_name: Option<String>,
+    pub destination_tag_regex: Option<String>,
 }
 
 #[test]
 fn test_account_deserialize() {
+    let input = r##"[
+{
+  "id": "f1bb8f61-7f5d-4f04-9552-bcbafdf856b7",
+  "type": "wallet",
+  "created_at": "2019-07-12T03:27:07Z",
+  "updated_at": "2019-07-12T14:07:57Z",
+  "resource": "account",
+  "resource_path": "/v2/accounts/f1bb8f61-7f5d-4f04-9552-bcbafdf856b7",
+  "name": "EOS Wallet",
+  "primary": true,
+  "currency": {
+    "code": "EOS",
+    "name": "EOS",
+    "color": "#000000",
+    "sort_index": 128,
+    "exponent": 4,
+    "type": "crypto",
+    "address_regex": "(^[a-z1-5.]{1,11}[a-z1-5]$)|(^[a-z1-5.]{12}[a-j1-5]$)",
+    "asset_id": "cc2ddaa5-5a03-4cbf-93ef-e4df102d4311",
+    "destination_tag_name": "EOS Memo",
+    "destination_tag_regex": "^.{1,100}$"
+  },
+  "balance": {
+    "amount": "9.1238",
+    "currency": "EOS"
+  },
+  "allow_deposits": true,
+  "allow_withdrawals": true
+}
+]"##;
+
+    let accounts: Vec<Account> = serde_json::from_slice(input.as_bytes()).unwrap();
+}
+
+#[test]
+fn test_transactions_deserialize() {
     let input = r#"[
 {
-    "allow_deposits": true,
-    "allow_withdrawals": true,
-    "balance": {
-        "amount": "2.0964",
-        "currency": "EOS"
-    },
-    "created_at": "2019-07-12T03:27:07Z",
-    "currency": "EOS",
-    "id": "b95a5b5b-9ed6-5486-85bc-d1a4052f2023",
-    "name": "EOS Wallet",
-    "native_balance": {
-        "amount": "9.96",
-        "currency": "USD"
-    },
-    "primary": false,
-    "resource": "account",
-    "resource_path": "/v2/accounts/b95a5b5b-9ed6-5486-85bc-d1a4052f2023",
-    "type": "wallet",
-    "updated_at": "2019-07-12T14:07:57Z"
+  "id": "9dd482e4-d8ce-46f7-a261-281843bd2855",
+  "type": "send",
+  "status": "completed",
+  "amount": {
+    "amount": "-0.00100000",
+    "currency": "BTC"
+  },
+  "native_amount": {
+    "amount": "-0.01",
+    "currency": "USD"
+  },
+  "description": null,
+  "created_at": "2015-03-11T13:13:35-07:00",
+  "updated_at": "2015-03-26T15:55:43-07:00",
+  "resource": "transaction",
+  "resource_path": "/v2/accounts/af6fd33a-e20c-494a-b3f6-f91d204af4b7/transactions/9dd482e4-d8ce-46f7-a261-281843bd2855",
+  "network": {
+    "status": "off_blockchain",
+    "name": "bitcoin"
+  },
+  "to": {
+    "id": "2dbc3cfb-ed1e-4c10-aedb-aeb1693e01e7",
+    "resource": "user",
+    "resource_path": "/v2/users/2dbc3cfb-ed1e-4c10-aedb-aeb1693e01e7"
+  },
+  "instant_exchange": false,
+  "details": {
+    "title": "Sent bitcoin",
+    "subtitle": "to User 2"
+  }
+},
+{
+  "id": "c1c413d1-acf8-4fcb-a8ed-4e2e4820c6f0",
+  "type": "buy",
+  "status": "pending",
+  "amount": {
+    "amount": "1.00000000",
+    "currency": "BTC"
+  },
+  "native_amount": {
+    "amount": "10.00",
+    "currency": "USD"
+  },
+  "description": null,
+  "created_at": "2015-03-26T13:42:00-07:00",
+  "updated_at": "2015-03-26T15:55:45-07:00",
+  "resource": "transaction",
+  "resource_path": "/v2/accounts/af6fd33a-e20c-494a-b3f6-f91d204af4b7/transactions/c1c413d1-acf8-4fcb-a8ed-4e2e4820c6f0",
+  "buy": {
+    "id": "ae7df6e7-fef1-441d-a6f3-e4661ca6f39a",
+    "resource": "buy",
+    "resource_path": "/v2/accounts/af6fd33a-e20c-494a-b3f6-f91d204af4b7/buys/ae7df6e7-fef1-441d-a6f3-e4661ca6f39a"
+  },
+  "instant_exchange": false,
+  "details": {
+    "title": "Bought bitcoin",
+    "subtitle": "using Capital One Bank"
+  }
 }
 ]"#;
-    let accounts: Vec<Account> = serde_json::from_slice(input.as_bytes()).unwrap();
+    let accounts: Vec<Transaction> = serde_json::from_slice(input.as_bytes()).unwrap();
 }
