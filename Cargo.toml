@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.10.0"
+bigdecimal = { version = "*", features = [ "serde" ] }
 chrono = { version = "0.4.5", features = [ "serde" ] }
 failure = "0.1.5"
 hmac = "0.7.0"

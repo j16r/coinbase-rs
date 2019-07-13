@@ -56,15 +56,12 @@ impl<A> Public<A> {
     where
         for<'de> U: serde::Deserialize<'de>,
     {
-        dbg!(&request);
-
         self.client
             .request(request)
             .map_err(CBError::Http)
             .and_then(|res| res.into_body().concat2().map_err(CBError::Http))
             .and_then(|body| {
-                dbg!(&body);
-                let res = serde_json::from_slice(&body).map_err(|e| {
+                let res: serde_json::Value = serde_json::from_slice(&body).map_err(|e| {
                     serde_json::from_slice(&body)
                         .map(CBError::Coinbase)
                         .unwrap_or_else(|_| {
@@ -72,7 +69,9 @@ impl<A> Public<A> {
                             CBError::Serde { error: e, data }
                         })
                 })?;
-                Ok(res)
+                let data = serde_json::from_slice(res["data"].to_string().as_bytes())
+                    .expect("parsing Response.data");
+                Ok(data)
             })
     }
 
@@ -84,4 +83,10 @@ impl<A> Public<A> {
     {
         self.adapter.process(self.call_future(request))
     }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Response {
+    pub pagination: String,
+    pub data: serde_json::Value,
 }

@@ -1,6 +1,8 @@
 use crate::adapters::{Adapter, AdapterNew};
 use crate::public::Public;
 
+use bigdecimal::BigDecimal;
+use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};
 use hyper::header::HeaderValue;
 use hyper::{Body, Method, Request, Uri};
@@ -68,11 +70,7 @@ impl<A> Private<A> {
         req.header("User-Agent", Public::<A>::USER_AGENT);
         req.header("Content-Type", "Application/JSON");
 
-        //req.header("CB-ACCESS-TOKEN", HeaderValue::from_str(&self.key).unwrap());
-        req.header(
-            "CB-ACCESS-VERSION",
-            HeaderValue::from_str("2016-02-18").unwrap(),
-        );
+        req.header("CB-VERSION", HeaderValue::from_str("2016-02-18").unwrap());
         req.header("CB-ACCESS-KEY", HeaderValue::from_str(&self.key).unwrap());
         req.header("CB-ACCESS-SIGN", HeaderValue::from_str(&sign).unwrap());
         req.header(
@@ -90,10 +88,9 @@ impl<A> Private<A> {
         path: &str,
         body_str: &str,
     ) -> String {
-        let mut mac: Hmac<sha2::Sha256> =
+        let mut mac: Hmac<Sha256> =
             Hmac::new_varkey(&secret.as_bytes()).expect("Hmac::new(secret)");
         let input = timestamp.to_string() + method.as_str() + path + body_str;
-        dbg!(&input);
         mac.input(input.as_bytes());
         format!("{:x}", &mac.result().code())
     }
@@ -102,14 +99,57 @@ impl<A> Private<A> {
 #[derive(Deserialize, Debug)]
 pub struct Account {
     pub id: String,
+
+    pub allow_deposits: bool,
+    pub allow_withdrawals: bool,
+    pub balance: Balance,
+    pub created_at: Option<DateTime<Utc>>,
     pub currency: String,
-    pub balance: f64,
-    pub available: f64,
-    pub hold: f64,
-    pub profile_id: String,
+
+    pub name: String,
+    pub native_balance: Balance,
+    pub primary: bool,
+    pub resource: String,
+    pub resource_path: String,
+    pub r#type: String,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Balance {
+    pub amount: BigDecimal,
+    pub currency: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct AccountHistory {
     pub id: String,
+}
+
+#[test]
+fn test_account_deserialize() {
+    let input = r#"[
+{
+    "allow_deposits": true,
+    "allow_withdrawals": true,
+    "balance": {
+        "amount": "2.0964",
+        "currency": "EOS"
+    },
+    "created_at": "2019-07-12T03:27:07Z",
+    "currency": "EOS",
+    "id": "b95a5b5b-9ed6-5486-85bc-d1a4052f2023",
+    "name": "EOS Wallet",
+    "native_balance": {
+        "amount": "9.96",
+        "currency": "USD"
+    },
+    "primary": false,
+    "resource": "account",
+    "resource_path": "/v2/accounts/b95a5b5b-9ed6-5486-85bc-d1a4052f2023",
+    "type": "wallet",
+    "updated_at": "2019-07-12T14:07:57Z"
+}
+]"#;
+    let accounts: Vec<Account> = serde_json::from_slice(input.as_bytes()).unwrap();
 }
