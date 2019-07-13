@@ -84,7 +84,7 @@ impl<A> Private<A> {
         req.header("User-Agent", Public::<A>::USER_AGENT);
         req.header("Content-Type", "Application/JSON");
 
-        req.header("CB-VERSION", HeaderValue::from_str("2016-02-18").unwrap());
+        req.header("CB-VERSION", HeaderValue::from_str("2019-04-03").unwrap());
         req.header("CB-ACCESS-KEY", HeaderValue::from_str(&self.key).unwrap());
         req.header("CB-ACCESS-SIGN", HeaderValue::from_str(&sign).unwrap());
         req.header(
