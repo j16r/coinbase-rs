@@ -1,7 +1,8 @@
 # Coinbase Client for Rust
 
-This is the a Rust client for interacting with the Coinbase (not Pro) API. It
-works with version 2019-04-03 (v2) of the API.
+This is a Rust client for interacting with the Coinbase API. It
+works with version 2019-04-03 (v2) of the API. This is not compatible with the
+Coinbase Pro API.
 
 ## Features
 
