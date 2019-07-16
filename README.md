@@ -18,6 +18,23 @@ Cargo.toml:
 coinbase-rs = "0.1.0"
 ```
 
+### Public API (Sync)
+
+```rust
+use coinbase_rs::{Public, Sync, MAIN_URL};
+
+fn main() {
+    let client: Public<Sync> = Public::new(MAIN_URL);
+
+    for currency in client.currencies().unwrap() {
+        println!(
+            "Currency {} mininum size = {}",
+            currency.name, currency.min_size
+        );
+    }
+}
+```
+
 ### Private API (Sync)
 
 ```rust
