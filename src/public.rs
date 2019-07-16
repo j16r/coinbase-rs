@@ -168,9 +168,22 @@ impl<A> Public<A> {
     {
         self.get_pub(&format!("/currency_pair/{}/spot", currency_pair))
     }
-}
 
-type DateTime = chrono::DateTime<chrono::Utc>;
+    ///
+    /// **Get current time**
+    ///
+    /// Get the API server time.
+    ///
+    /// https://developers.coinbase.com/api/v2#time
+    ///
+    //pub fn current_time(&self) -> A::Result
+    //where
+        //A: Adapter<DateTime> + 'static,
+    //{
+        //self.get_pub("/current_time")
+            //.map(|c: Adapter<Result = Result<T, CBError>>| c.iso)
+    //}
+}
 
 #[derive(Deserialize, Debug)]
 pub struct Response {
@@ -207,6 +220,11 @@ pub struct ExchangeRates {
 pub struct CurrencyPrice {
     pub amount: BigDecimal,
     pub currency: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct CurrentTime {
+    iso: DateTime,
 }
 
 #[test]
@@ -263,5 +281,17 @@ fn test_currency_price_deserialize() {
   "amount": "1010.25",
   "currency": "USD"
 }"#;
-    let accounts: CurrencyPrice = serde_json::from_slice(input.as_bytes()).unwrap();
+    let currency_price: CurrencyPrice = serde_json::from_slice(input.as_bytes()).unwrap();
+}
+
+#[test]
+fn test_current_time_deserialize() {
+    let input = r#"{
+  "iso": "2015-06-23T18:02:51Z",
+  "epoch": 1435082571
+}"#;
+    let time: crate::DateTime = serde_json::from_slice(input.as_bytes())
+        .map(|c: CurrentTime| c.iso)
+        .unwrap();
+    assert_eq!(1435082571, time.timestamp());
 }
