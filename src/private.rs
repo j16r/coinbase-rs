@@ -28,6 +28,13 @@ impl<A> Private<A> {
         }
     }
 
+    ///
+    /// **List accounts**
+    ///
+    /// Lists current user’s accounts to which the authentication method has access to.
+    ///
+    /// https://developers.coinbase.com/api/v2#list-accounts
+    ///
     pub fn accounts(&self) -> A::Result
     where
         A: Adapter<Vec<Account>> + 'static,
@@ -35,7 +42,14 @@ impl<A> Private<A> {
         self.call_get("/accounts?limit=100")
     }
 
-    pub fn list_transactions(&self, account_id: &Uuid) -> A::Result
+    ///
+    /// **List transactions**
+    ///
+    /// Lists account’s transactions.
+    ///
+    /// https://developers.coinbase.com/api/v2#list-transactions
+    ///
+    pub fn transactions(&self, account_id: &Uuid) -> A::Result
     where
         A: Adapter<Vec<Transaction>> + 'static,
     {
@@ -295,5 +309,5 @@ fn test_transactions_deserialize() {
   }
 }
 ]"#;
-    let accounts: Vec<Transaction> = serde_json::from_slice(input.as_bytes()).unwrap();
+    let transactions: Vec<Transaction> = serde_json::from_slice(input.as_bytes()).unwrap();
 }

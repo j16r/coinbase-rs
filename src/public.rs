@@ -93,6 +93,7 @@ impl<A> Public<A> {
         req.body(Body::empty()).unwrap()
     }
 
+    ///
     /// **Get currencies**
     ///
     /// List known currencies. Currency codes will conform to the ISO 4217 standard where possible.
@@ -108,6 +109,7 @@ impl<A> Public<A> {
         self.get_pub("/currencies")
     }
 
+    ///
     /// **Get exchange rates**
     ///
     /// Get current exchange rates. Default base currency is USD but it can be defined as any
@@ -123,6 +125,7 @@ impl<A> Public<A> {
         self.get_pub("/exchange-rates")
     }
 
+    ///
     /// **Get buy price**
     ///
     /// Get the total price to buy one bitcoin or ether.
@@ -136,6 +139,7 @@ impl<A> Public<A> {
         self.get_pub(&format!("/currency_pair/{}/buy", currency_pair))
     }
 
+    ///
     /// **Get sell price**
     ///
     /// Get the total price to sell one bitcoin or ether.
@@ -149,6 +153,7 @@ impl<A> Public<A> {
         self.get_pub(&format!("/currency_pair/{}/sell", currency_pair))
     }
 
+    ///
     /// **Get spot price**
     ///
     /// Get the current market price for a currency pair. This is usually somewhere in between the
@@ -227,7 +232,7 @@ fn test_currencies_deserialize() {
     "min_size": "0.01000000"
   }
 ]"#;
-    let accounts: Vec<Currency> = serde_json::from_slice(input.as_bytes()).unwrap();
+    let currencies: Vec<Currency> = serde_json::from_slice(input.as_bytes()).unwrap();
 }
 
 #[test]
@@ -248,7 +253,7 @@ fn test_exchange_rates_deserialize() {
     "BAM": "17.38"
   }
 }"#;
-    let accounts: ExchangeRates = serde_json::from_slice(input.as_bytes()).unwrap();
+    let exchange_rates: ExchangeRates = serde_json::from_slice(input.as_bytes()).unwrap();
 }
 
 #[test]
