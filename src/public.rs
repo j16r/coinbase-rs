@@ -1,5 +1,6 @@
 use super::error::CBError;
 use crate::adapters::{Adapter, AdapterNew};
+use std::collections::HashMap;
 
 use bigdecimal::BigDecimal;
 use hyper::client::HttpConnector;
@@ -98,18 +99,68 @@ impl<A> Public<A> {
     /// Currencies which have or had no representation in ISO 4217 may use a custom code (e.g.
     /// BTC).
     ///
-    /// # Account Fields
-    /// | Field    | Description             |
-    /// | -------- | ----------------------- |
-    /// | id       | ISO 4217 currency code  |
-    /// | name     | Name of currency        |
-    /// | min_size |                         |
+    /// https://developers.coinbase.com/api/v2#currencies
     ///
     pub fn currencies(&self) -> A::Result
     where
         A: Adapter<Vec<Currency>> + 'static,
     {
         self.get_pub("/currencies")
+    }
+
+    /// **Get exchange rates**
+    ///
+    /// Get current exchange rates. Default base currency is USD but it can be defined as any
+    /// supported currency. Returned rates will define the exchange rate for one unit of the base
+    /// currency.
+    ///
+    /// https://developers.coinbase.com/api/v2#exchange-rates
+    ///
+    pub fn exchange_rates(&self) -> A::Result
+    where
+        A: Adapter<ExchangeRates> + 'static,
+    {
+        self.get_pub("/exchange-rates")
+    }
+
+    /// **Get buy price**
+    ///
+    /// Get the total price to buy one bitcoin or ether.
+    ///
+    /// https://developers.coinbase.com/api/v2#get-buy-price
+    ///
+    pub fn buy_price(&self, currency_pair: &str) -> A::Result
+    where
+        A: Adapter<CurrencyPrice> + 'static,
+    {
+        self.get_pub(&format!("/currency_pair/{}/buy", currency_pair))
+    }
+
+    /// **Get sell price**
+    ///
+    /// Get the total price to sell one bitcoin or ether.
+    ///
+    /// https://developers.coinbase.com/api/v2#get-sell-price
+    ///
+    pub fn sell_price(&self, currency_pair: &str) -> A::Result
+    where
+        A: Adapter<CurrencyPrice> + 'static,
+    {
+        self.get_pub(&format!("/currency_pair/{}/sell", currency_pair))
+    }
+
+    /// **Get spot price**
+    ///
+    /// Get the current market price for a currency pair. This is usually somewhere in between the
+    /// buy and sell price.
+    ///
+    /// https://developers.coinbase.com/api/v2#get-spot-price
+    ///
+    pub fn spot_price(&self, currency_pair: &str, date: Option<chrono::NaiveDate>) -> A::Result
+    where
+        A: Adapter<CurrencyPrice> + 'static,
+    {
+        self.get_pub(&format!("/currency_pair/{}/spot", currency_pair))
     }
 }
 
@@ -140,29 +191,71 @@ pub struct Currency {
     pub min_size: BigDecimal,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct ExchangeRates {
+    pub currency: String,
+    pub rates: HashMap<String, BigDecimal>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct CurrencyPrice {
+    pub amount: BigDecimal,
+    pub currency: String,
+}
+
 #[test]
 fn test_currencies_deserialize() {
     let input = r#"[
-{
-  "id": "AED",
-  "name": "United Arab Emirates Dirham",
-  "min_size": "0.01000000"
-},
-{
-  "id": "AFN",
-  "name": "Afghan Afghani",
-  "min_size": "0.01000000"
-},
-{
-  "id": "ALL",
-  "name": "Albanian Lek",
-  "min_size": "0.01000000"
-},
-{
-  "id": "AMD",
-  "name": "Armenian Dram",
-  "min_size": "0.01000000"
-}
+  {
+    "id": "AED",
+    "name": "United Arab Emirates Dirham",
+    "min_size": "0.01000000"
+  },
+  {
+    "id": "AFN",
+    "name": "Afghan Afghani",
+    "min_size": "0.01000000"
+  },
+  {
+    "id": "ALL",
+    "name": "Albanian Lek",
+    "min_size": "0.01000000"
+  },
+  {
+    "id": "AMD",
+    "name": "Armenian Dram",
+    "min_size": "0.01000000"
+  }
 ]"#;
     let accounts: Vec<Currency> = serde_json::from_slice(input.as_bytes()).unwrap();
+}
+
+#[test]
+fn test_exchange_rates_deserialize() {
+    let input = r#"{
+  "currency": "BTC",
+  "rates": {
+    "AED": "36.73",
+    "AFN": "589.50",
+    "ALL": "1258.82",
+    "AMD": "4769.49",
+    "ANG": "17.88",
+    "AOA": "1102.76",
+    "ARS": "90.37",
+    "AUD": "12.93",
+    "AWG": "17.93",
+    "AZN": "10.48",
+    "BAM": "17.38"
+  }
+}"#;
+    let accounts: ExchangeRates = serde_json::from_slice(input.as_bytes()).unwrap();
+}
+
+#[test]
+fn test_currency_price_deserialize() {
+    let input = r#"{
+  "amount": "1010.25",
+  "currency": "USD"
+}"#;
+    let accounts: CurrencyPrice = serde_json::from_slice(input.as_bytes()).unwrap();
 }
