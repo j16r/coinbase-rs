@@ -1,8 +1,8 @@
 use crate::adapters::{Adapter, AdapterNew};
 use crate::public::Public;
+use crate::DateTime;
 
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};
 use hyper::header::HeaderValue;
 use hyper::{Body, Method, Request, Uri};
@@ -134,8 +134,8 @@ pub struct Account {
 
     pub r#type: String,
 
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime>,
+    pub updated_at: Option<DateTime>,
 
     pub resource: String,
     pub resource_path: String,
@@ -161,8 +161,8 @@ pub struct Balance {
 pub struct Transaction {
     pub id: Uuid,
 
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime>,
+    pub updated_at: Option<DateTime>,
 
     pub r#type: String,
     pub resource: String,
