@@ -3,7 +3,7 @@ use crate::adapters::{Adapter, AdapterNew};
 
 use hyper::client::HttpConnector;
 use hyper::rt::{Future, Stream};
-use hyper::{Body, Client, Request, Uri};
+use hyper::{Body, Client, Request};
 use hyper_tls::HttpsConnector;
 
 pub struct Public<Adapter> {
@@ -15,8 +15,6 @@ pub struct Public<Adapter> {
 impl<A> Public<A> {
     pub(crate) const USER_AGENT: &'static str = concat!("coinbase-rs/", env!("CARGO_PKG_VERSION"));
 
-    // This function is contructor which can control keep_alive flag of the connection.
-    // Created for tests to exit tokio::run
     pub fn new_with_keep_alive(uri: &str, keep_alive: bool) -> Self
     where
         A: AdapterNew,
@@ -39,14 +37,6 @@ impl<A> Public<A> {
         A: AdapterNew,
     {
         Self::new_with_keep_alive(uri, true)
-    }
-
-    fn request(&self, uri: &str) -> Request<Body> {
-        let uri: Uri = (self.uri.to_string() + uri).parse().unwrap();
-
-        let mut req = Request::get(uri);
-        req.header("User-Agent", Self::USER_AGENT);
-        req.body(Body::empty()).unwrap()
     }
 
     pub(crate) fn call_future<U>(
