@@ -39,7 +39,10 @@ impl<A> Private<A> {
     where
         A: Adapter<Vec<Transaction>> + 'static,
     {
-        self.call_get(&format!("/accounts/{}/transactions", account_id))
+        self.call_get(&format!(
+            "/accounts/{}/transactions?limit=100&order=asc",
+            account_id
+        ))
     }
 
     fn call_get<U>(&self, uri: &str) -> A::Result
