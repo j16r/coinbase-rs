@@ -3,6 +3,11 @@ name = "coinbase-rs"
 version = "0.1.0"
 authors = ["John Barker <dev@j16r.net>"]
 edition = "2018"
+repository = "https://github.com/j16r/coinbase-rs"
+license = "MIT/Apache-2.0"
+readme = "README.md"
+categories = [ "api-bindings", "cryptography::cryptocurrencies" ]
+keywords = [ "exchange", "coinbase", "bitcoin" ]
 
 [dependencies]
 base64 = "0.10.0"
