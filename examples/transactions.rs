@@ -12,7 +12,7 @@ fn main() {
     for account in accounts {
         println!("Account {}", account.currency.code);
         if let Ok(id) = Uuid::from_str(&account.id) {
-            for transaction in client.list_transactions(&id).unwrap() {
+            for transaction in client.transactions(&id).unwrap() {
                 println!(
                     "Transaction {} = {}",
                     transaction.id, transaction.amount.amount
