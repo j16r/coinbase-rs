@@ -240,6 +240,7 @@ fn test_account_deserialize() {
 ]"##;
 
     let accounts: Vec<Account> = serde_json::from_slice(input.as_bytes()).unwrap();
+    assert_eq!(accounts.len(), 1);
 }
 
 #[test]
@@ -307,4 +308,5 @@ fn test_transactions_deserialize() {
 }
 ]"#;
     let transactions: Vec<Transaction> = serde_json::from_slice(input.as_bytes()).unwrap();
+    assert_eq!(transactions.len(), 2);
 }

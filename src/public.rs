@@ -162,7 +162,7 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#get-spot-price
     ///
-    pub fn spot_price(&self, currency_pair: &str, date: Option<chrono::NaiveDate>) -> A::Result
+    pub fn spot_price(&self, currency_pair: &str, _date: Option<chrono::NaiveDate>) -> A::Result
     where
         A: Adapter<CurrencyPrice> + 'static,
     {
@@ -261,7 +261,7 @@ fn test_currencies_deserialize() {
   }
 ]"#;
     let currencies: Vec<Currency> = serde_json::from_slice(input.as_bytes()).unwrap();
-    assert_eq!(currencies.length(), 4);
+    assert_eq!(currencies.len(), 4);
 }
 
 #[test]
@@ -284,6 +284,8 @@ fn test_exchange_rates_deserialize() {
   }
 }"#;
     let exchange_rates: ExchangeRates = serde_json::from_slice(input.as_bytes()).unwrap();
+    assert_eq!(exchange_rates.currency, "BTC");
+    assert_eq!(exchange_rates.rates.len(), 11);
 }
 
 #[test]
@@ -294,6 +296,8 @@ fn test_currency_price_deserialize() {
   "currency": "USD"
 }"#;
     let currency_price: CurrencyPrice = serde_json::from_slice(input.as_bytes()).unwrap();
+    assert_eq!(currency_price.amount, BigDecimal::from(1010.25));
+    assert_eq!(currency_price.currency, "USD");
 }
 
 #[test]
