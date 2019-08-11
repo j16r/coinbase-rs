@@ -176,13 +176,21 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#time
     ///
-    //pub fn current_time(&self) -> A::Result
-    //where
-        //A: Adapter<DateTime> + 'static,
-    //{
-        //self.get_pub("/current_time")
-            //.map(|c: Adapter<Result = Result<T, CBError>>| c.iso)
-    //}
+    pub fn current_time(&self) -> A::Result
+    where
+        A: Adapter<DateTime> + 'static,
+    {
+        self.get_pub("/current_time")
+        //.map(|c: Adapter<Result = Result<T, CBError>>| c.iso)
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub enum Order {
+    #[serde(rename = "asc")]
+    Ascending,
+    #[serde(rename = "desc")]
+    Descending,
 }
 
 #[derive(Deserialize, Debug)]
@@ -198,7 +206,7 @@ pub struct Pagination {
     pub previous_ending_before: Option<DateTime>,
     pub next_starting_after: Option<DateTime>,
     pub limit: usize,
-    pub order: String,
+    pub order: Order,
     pub previous_uri: String,
     pub next_uri: String,
 }
@@ -229,7 +237,8 @@ struct CurrentTime {
 
 #[test]
 fn test_currencies_deserialize() {
-    let input = r#"[
+    let input = r#"
+[
   {
     "id": "AED",
     "name": "United Arab Emirates Dirham",
@@ -252,11 +261,13 @@ fn test_currencies_deserialize() {
   }
 ]"#;
     let currencies: Vec<Currency> = serde_json::from_slice(input.as_bytes()).unwrap();
+    assert_eq!(currencies.length(), 4);
 }
 
 #[test]
 fn test_exchange_rates_deserialize() {
-    let input = r#"{
+    let input = r#"
+{
   "currency": "BTC",
   "rates": {
     "AED": "36.73",
@@ -277,7 +288,8 @@ fn test_exchange_rates_deserialize() {
 
 #[test]
 fn test_currency_price_deserialize() {
-    let input = r#"{
+    let input = r#"
+{
   "amount": "1010.25",
   "currency": "USD"
 }"#;
@@ -286,7 +298,8 @@ fn test_currency_price_deserialize() {
 
 #[test]
 fn test_current_time_deserialize() {
-    let input = r#"{
+    let input = r#"
+{
   "iso": "2015-06-23T18:02:51Z",
   "epoch": 1435082571
 }"#;
