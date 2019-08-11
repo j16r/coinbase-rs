@@ -11,16 +11,16 @@ categories = [ "api-bindings", "cryptography::cryptocurrencies" ]
 keywords = [ "exchange", "coinbase", "bitcoin" ]
 
 [dependencies]
-base64 = "*"
-bigdecimal = { version = "*", features = [ "serde" ] }
-chrono = { version = "*", features = [ "serde" ] }
-failure = "*"
-hmac = "*"
-hyper = "*"
-hyper-tls = "*"
-serde = "*"
-serde_derive = "*"
-serde_json = "*"
-sha2 = "*"
-tokio = "*"
-uuid = { version = "*", features = [ "serde" ] }
+base64 = "0.10"
+bigdecimal = { version = "0.1", features = [ "serde" ] }
+chrono = { version = "0.4", features = [ "serde" ] }
+failure = "0.1"
+hmac = "0.7"
+hyper = "0.12"
+hyper-tls = "0.3"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+sha2 = "0.8"
+tokio = "0.1"
+uuid = { version = "0.7", features = [ "serde" ] }
