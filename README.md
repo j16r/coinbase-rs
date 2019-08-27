@@ -1,5 +1,7 @@
 # Coinbase Client for Rust
 
+[![Actions Status](https://github.com/j16r/coinbase-rs/workflows/Rust/badge.svg)](https://github.com/j16r/coinbase-rs/actions)
+
 This is a Rust client for interacting with the Coinbase API. It
 works with version 2019-04-03 (v2) of the API. This is not compatible with the
 Coinbase Pro API.
