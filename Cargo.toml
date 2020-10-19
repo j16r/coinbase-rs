@@ -12,7 +12,7 @@ keywords = [ "exchange", "coinbase", "bitcoin" ]
 
 [dependencies]
 base64 = "0.10"
-bigdecimal = { version = "0.1", features = [ "serde" ] }
+bigdecimal = { version = "0.2", features = [ "serde" ] }
 chrono = { version = "0.4", features = [ "serde" ] }
 failure = "0.1"
 hmac = "0.7"

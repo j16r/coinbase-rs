@@ -3,7 +3,7 @@ use crate::adapters::{Adapter, AdapterNew};
 use crate::DateTime;
 use std::collections::HashMap;
 
-use bigdecimal::BigDecimal;
+use bigdecimal::{BigDecimal, FromPrimitive};
 use hyper::client::HttpConnector;
 use hyper::rt::{Future, Stream};
 use hyper::{Body, Client, Request, Uri};
@@ -296,7 +296,7 @@ fn test_currency_price_deserialize() {
   "currency": "USD"
 }"#;
     let currency_price: CurrencyPrice = serde_json::from_slice(input.as_bytes()).unwrap();
-    assert_eq!(currency_price.amount, BigDecimal::from(1010.25));
+    assert_eq!(currency_price.amount, BigDecimal::from_f32(1010.25).unwrap());
     assert_eq!(currency_price.currency, "USD");
 }
 
