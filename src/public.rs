@@ -3,7 +3,7 @@ use crate::adapters::{Adapter, AdapterNew};
 use crate::DateTime;
 use std::collections::HashMap;
 
-use bigdecimal::{BigDecimal, FromPrimitive};
+use bigdecimal::BigDecimal;
 use hyper::client::HttpConnector;
 use hyper::rt::{Future, Stream};
 use hyper::{Body, Client, Request, Uri};
@@ -235,80 +235,87 @@ struct CurrentTime {
     iso: DateTime,
 }
 
-#[test]
-fn test_currencies_deserialize() {
-    let input = r#"
-[
-  {
-    "id": "AED",
-    "name": "United Arab Emirates Dirham",
-    "min_size": "0.01000000"
-  },
-  {
-    "id": "AFN",
-    "name": "Afghan Afghani",
-    "min_size": "0.01000000"
-  },
-  {
-    "id": "ALL",
-    "name": "Albanian Lek",
-    "min_size": "0.01000000"
-  },
-  {
-    "id": "AMD",
-    "name": "Armenian Dram",
-    "min_size": "0.01000000"
-  }
-]"#;
-    let currencies: Vec<Currency> = serde_json::from_slice(input.as_bytes()).unwrap();
-    assert_eq!(currencies.len(), 4);
-}
+#[cfg(test)]
+mod test {
+    use bigdecimal::FromPrimitive;
 
-#[test]
-fn test_exchange_rates_deserialize() {
-    let input = r#"
-{
-  "currency": "BTC",
-  "rates": {
-    "AED": "36.73",
-    "AFN": "589.50",
-    "ALL": "1258.82",
-    "AMD": "4769.49",
-    "ANG": "17.88",
-    "AOA": "1102.76",
-    "ARS": "90.37",
-    "AUD": "12.93",
-    "AWG": "17.93",
-    "AZN": "10.48",
-    "BAM": "17.38"
-  }
-}"#;
-    let exchange_rates: ExchangeRates = serde_json::from_slice(input.as_bytes()).unwrap();
-    assert_eq!(exchange_rates.currency, "BTC");
-    assert_eq!(exchange_rates.rates.len(), 11);
-}
+    use super::*;
 
-#[test]
-fn test_currency_price_deserialize() {
-    let input = r#"
-{
-  "amount": "1010.25",
-  "currency": "USD"
-}"#;
-    let currency_price: CurrencyPrice = serde_json::from_slice(input.as_bytes()).unwrap();
-    assert_eq!(currency_price.amount, BigDecimal::from_f32(1010.25).unwrap());
-    assert_eq!(currency_price.currency, "USD");
-}
+    #[test]
+    fn test_currencies_deserialize() {
+        let input = r#"
+    [
+    {
+        "id": "AED",
+        "name": "United Arab Emirates Dirham",
+        "min_size": "0.01000000"
+    },
+    {
+        "id": "AFN",
+        "name": "Afghan Afghani",
+        "min_size": "0.01000000"
+    },
+    {
+        "id": "ALL",
+        "name": "Albanian Lek",
+        "min_size": "0.01000000"
+    },
+    {
+        "id": "AMD",
+        "name": "Armenian Dram",
+        "min_size": "0.01000000"
+    }
+    ]"#;
+        let currencies: Vec<Currency> = serde_json::from_slice(input.as_bytes()).unwrap();
+        assert_eq!(currencies.len(), 4);
+    }
 
-#[test]
-fn test_current_time_deserialize() {
-    let input = r#"
-{
-  "iso": "2015-06-23T18:02:51Z",
-  "epoch": 1435082571
-}"#;
-    let time: crate::DateTime = serde_json::from_slice(input.as_bytes())
-        .map(|c: CurrentTime| c.iso)
-        .unwrap();
-    assert_eq!(1435082571, time.timestamp());
+    #[test]
+    fn test_exchange_rates_deserialize() {
+        let input = r#"
+    {
+    "currency": "BTC",
+    "rates": {
+        "AED": "36.73",
+        "AFN": "589.50",
+        "ALL": "1258.82",
+        "AMD": "4769.49",
+        "ANG": "17.88",
+        "AOA": "1102.76",
+        "ARS": "90.37",
+        "AUD": "12.93",
+        "AWG": "17.93",
+        "AZN": "10.48",
+        "BAM": "17.38"
+    }
+    }"#;
+        let exchange_rates: ExchangeRates = serde_json::from_slice(input.as_bytes()).unwrap();
+        assert_eq!(exchange_rates.currency, "BTC");
+        assert_eq!(exchange_rates.rates.len(), 11);
+    }
+
+    #[test]
+    fn test_currency_price_deserialize() {
+        let input = r#"
+    {
+    "amount": "1010.25",
+    "currency": "USD"
+    }"#;
+        let currency_price: CurrencyPrice = serde_json::from_slice(input.as_bytes()).unwrap();
+        assert_eq!(currency_price.amount, BigDecimal::from_f32(1010.25).unwrap());
+        assert_eq!(currency_price.currency, "USD");
+    }
+
+    #[test]
+    fn test_current_time_deserialize() {
+        let input = r#"
+    {
+    "iso": "2015-06-23T18:02:51Z",
+    "epoch": 1435082571
+    }"#;
+        let time: crate::DateTime = serde_json::from_slice(input.as_bytes())
+            .map(|c: CurrentTime| c.iso)
+            .unwrap();
+        assert_eq!(1435082571, time.timestamp());
+    }
 }
