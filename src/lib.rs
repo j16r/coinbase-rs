@@ -10,6 +10,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate sha2;
 extern crate tokio;
+extern crate uritemplate;
 
 pub mod adapters;
 pub mod error;

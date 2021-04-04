@@ -1,6 +1,7 @@
+use crate::DateTime;
 use crate::adapters::{Adapter, AdapterNew};
 use crate::public::Public;
-use crate::DateTime;
+use crate::uritemplate::UriTemplate;
 
 use bigdecimal::BigDecimal;
 use hmac::{Hmac, Mac};
@@ -53,7 +54,12 @@ impl<A> Private<A> {
     where
         A: Adapter<Vec<Transaction>> + 'static,
     {
-        self.call_get(&format!("/accounts/{}/transactions", account_id))
+        let limit = 100;
+        let uri = UriTemplate::new("/accounts/{account}/transactions{?query*}")
+            .set("account", account_id.to_string())
+            .set("query", &[("limit", limit.to_string().as_ref())])
+            .build();
+        self.call_get(&uri)
     }
 
     fn call_get<U>(&self, uri: &str) -> A::Result
@@ -204,6 +210,44 @@ pub struct Currency {
     pub asset_id: Option<Uuid>,
     pub destination_tag_name: Option<String>,
     pub destination_tag_regex: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Eq, PartialEq)]
+pub enum Order {
+    #[serde(rename = "asc")]
+    Ascending,
+    #[serde(rename = "desc")]
+    Descending,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Pagination {
+    pub ending_before: Option<DateTime>,
+    pub starting_after: Option<DateTime>,
+    pub previous_ending_before: Option<String>,
+    pub next_starting_after: Option<String>,
+    pub limit: usize,
+    pub order: Order,
+    pub previous_uri: Option<String>,
+    pub next_uri: Option<String>,
+}
+
+#[test]
+fn test_pagination_deserialize() {
+    let input = r##"
+{
+    "ending_before": null,
+    "starting_after": null,
+    "previous_ending_before": null,
+    "next_starting_after": "d16ec1ba-b3f7-5d6a-a9c8-817930030324",
+    "limit": 25,
+    "order": "desc",
+    "previous_uri": null,
+    "next_uri": "/v2/accounts?starting_after=d16ec1ba-b3f7-5d6a-a9c8-817930030324"
+}"##;
+    let pagination: Pagination = serde_json::from_slice(input.as_bytes()).unwrap();
+    assert_eq!(25, pagination.limit);
+    assert_eq!(Order::Descending, pagination.order);
 }
 
 #[test]
