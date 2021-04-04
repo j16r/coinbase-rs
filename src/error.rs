@@ -1,5 +1,7 @@
 use std::fmt;
 
+use thiserror::Error;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Error {
     message: String,
@@ -11,18 +13,14 @@ impl fmt::Display for Error {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum CBError {
-    #[fail(display = "http: {}", _0)]
-    Http(#[cause] super::hyper::Error),
-    #[fail(display = "serde: {}\n    {}", error, data)]
-    Serde {
-        #[cause]
-        error: super::serde_json::Error,
-        data: String,
-    },
-    #[fail(display = "coinbase: {}", _0)]
+    #[error("http error {0}")]
+    Http(#[from] super::hyper::Error),
+    #[error(transparent)]
+    Serde(#[from] super::serde_json::Error),
+    #[error("coinbase: {0}")]
     Coinbase(Error),
-    #[fail(display = "null")]
+    #[error("null")]
     Null,
 }
