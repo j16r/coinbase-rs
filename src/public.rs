@@ -1,13 +1,15 @@
-use super::error::CBError;
-use crate::adapters::{Adapter, AdapterNew};
-use crate::DateTime;
 use std::collections::HashMap;
+use std::thread;
+use std::time::Duration;
+use std::future::Future;
 
 use bigdecimal::BigDecimal;
-use hyper::client::HttpConnector;
-use hyper::rt::{Future, Stream};
-use hyper::{Body, Client, Request, Uri};
+use hyper::{Body, Client, client::HttpConnector, Request, Uri};
 use hyper_tls::HttpsConnector;
+
+use crate::adapters::{Adapter, AdapterNew};
+use crate::DateTime;
+use super::error::CBError;
 
 pub struct Public<Adapter> {
     pub(crate) uri: String,
@@ -22,9 +24,9 @@ impl<A> Public<A> {
     where
         A: AdapterNew,
     {
-        let https = HttpsConnector::new(4).unwrap();
+        let https = HttpsConnector::new();
         let client = Client::builder()
-            .keep_alive(keep_alive)
+            .pool_idle_timeout(Duration::from_secs(30))
             .build::<_, Body>(https);
         let uri = uri.to_string();
 
@@ -45,34 +47,33 @@ impl<A> Public<A> {
     pub(crate) fn call_future<U>(
         &self,
         request: Request<Body>,
-    ) -> impl Future<Item = U, Error = CBError>
+    ) -> impl Future<Output = Result<Response<U>, CBError>>
     where
-        for<'de> U: serde::Deserialize<'de>,
+        U: serde::de::DeserializeOwned,
     {
-        self.client
-            .request(request)
-            .map_err(CBError::Http)
-            .and_then(|res| res.into_body().concat2().map_err(CBError::Http))
-            .and_then(|body| {
-                let res: serde_json::Value = serde_json::from_slice(&body).map_err(|e| {
-                    serde_json::from_slice(&body)
-                        .map(CBError::Coinbase)
-                        .unwrap_or_else(|_| {
-                            let data = String::from_utf8(body.to_vec()).unwrap();
-                            CBError::Serde { error: e, data }
-                        })
-                })?;
-                let data = serde_json::from_slice(res["data"].to_string().as_bytes())
-                    .expect("parsing Response.data");
-                Ok(data)
-            })
+        thread::sleep(Duration::from_millis(350));
+
+        let request_future = self.client.request(request);
+
+        async move {
+            let response = request_future.await?;
+            let body = hyper::body::to_bytes(response.into_body()).await?;
+
+            match serde_json::from_slice::<Response<U>>(&body) {
+                Ok(body) => Ok(body),
+                Err(e) => match serde_json::from_slice(&body) {
+                    Ok(coinbase_err) => Err(CBError::Coinbase(coinbase_err)),
+                    Err(_) => Err(CBError::Serde(e)),
+                },
+            }
+        }
     }
 
     pub(crate) fn call<U>(&self, request: Request<Body>) -> A::Result
     where
         A: Adapter<U> + 'static,
         U: Send + 'static,
-        for<'de> U: serde::Deserialize<'de>,
+        U: serde::de::DeserializeOwned,
     {
         self.adapter.process(self.call_future(request))
     }
@@ -81,7 +82,7 @@ impl<A> Public<A> {
     where
         A: Adapter<U> + 'static,
         U: Send + 'static,
-        for<'de> U: serde::Deserialize<'de>,
+        U: serde::de::DeserializeOwned,
     {
         self.call(self.request(uri))
     }
@@ -89,9 +90,10 @@ impl<A> Public<A> {
     fn request(&self, uri: &str) -> Request<Body> {
         let uri: Uri = (self.uri.to_string() + uri).parse().unwrap();
 
-        let mut req = Request::get(uri);
-        req.header("User-Agent", Self::USER_AGENT);
-        req.body(Body::empty()).unwrap()
+        Request::get(uri)
+            .header("User-Agent", Self::USER_AGENT)
+            .body(Body::empty())
+            .unwrap()
     }
 
     ///
@@ -181,8 +183,13 @@ impl<A> Public<A> {
         A: Adapter<DateTime> + 'static,
     {
         self.get_pub("/current_time")
-        //.map(|c: Adapter<Result = Result<T, CBError>>| c.iso)
     }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Response<U> {
+    pub pagination: Pagination,
+    pub data: U,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -193,22 +200,16 @@ pub enum Order {
     Descending,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Response {
-    pub pagination: Pagination,
-    pub data: serde_json::Value,
-}
-
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Pagination {
     pub ending_before: Option<DateTime>,
     pub starting_after: Option<DateTime>,
-    pub previous_ending_before: Option<DateTime>,
-    pub next_starting_after: Option<DateTime>,
+    pub previous_ending_before: Option<String>,
+    pub next_starting_after: Option<String>,
     pub limit: usize,
     pub order: Order,
-    pub previous_uri: String,
-    pub next_uri: String,
+    pub previous_uri: Option<String>,
+    pub next_uri: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
