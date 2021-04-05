@@ -1,18 +1,18 @@
-extern crate tokio;
-
-use super::error::CBError;
-use hyper::rt::Future;
-
 use std::cell::RefCell;
 use std::fmt::Debug;
+use std::future::Future;
 use std::io;
+
 use tokio::runtime::Runtime;
+
+use super::error::CBError;
+use crate::public::Response;
 
 pub trait Adapter<T> {
     type Result;
     fn process<F>(&self, f: F) -> Self::Result
     where
-        F: Future<Item = T, Error = CBError> + Send + 'static;
+        F: Future<Output = Result<Response<T>, CBError>> + Send + 'static;
 }
 
 pub trait AdapterNew: Sized {
@@ -25,7 +25,8 @@ pub struct Sync(RefCell<Runtime>);
 impl AdapterNew for Sync {
     type Error = io::Error;
     fn new() -> Result<Self, Self::Error> {
-        Ok(Sync(RefCell::new(Runtime::new()?)))
+        let runtime = Runtime::new()?;
+        Ok(Sync(RefCell::new(runtime)))
     }
 }
 
@@ -36,9 +37,12 @@ where
     type Result = Result<T, CBError>;
     fn process<F>(&self, f: F) -> Self::Result
     where
-        F: Future<Item = T, Error = CBError> + Send + 'static,
+        F: Future<Output = Result<Response<T>, CBError>> + Send + 'static,
     {
-        self.0.borrow_mut().block_on(f)
+        match self.0.borrow_mut().block_on(f) {
+            Ok(response) => Ok(response.data),
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -52,11 +56,17 @@ impl AdapterNew for ASync {
 }
 
 impl<T> Adapter<T> for ASync {
-    type Result = Box<dyn Future<Item = T, Error = CBError> + Send>;
+    type Result = Box<dyn Future<Output = Result<T, CBError>> + Send>;
     fn process<F>(&self, f: F) -> Self::Result
     where
-        F: Future<Item = T, Error = CBError> + Send + 'static,
+        F: Future<Output = Result<Response<T>, CBError>> + Send + 'static,
     {
-        Box::new(f)
+        Box::new(async move {
+            let response = f.await;
+            match response {
+                Ok(response) => Ok(response.data),
+                Err(e) => Err(e),
+            }
+        })
     }
 }

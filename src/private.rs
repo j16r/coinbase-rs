@@ -1,15 +1,19 @@
-use crate::DateTime;
-use crate::adapters::{Adapter, AdapterNew};
-use crate::public::Public;
-use crate::uritemplate::UriTemplate;
+use std::time::{SystemTime, UNIX_EPOCH};
+// use std::pin::Pin;
+// use std::task::{Context, Poll};
 
 use bigdecimal::BigDecimal;
 use hmac::{Hmac, Mac};
 use hyper::header::HeaderValue;
 use hyper::{Body, Method, Request, Uri};
 use sha2::Sha256;
-use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+use uritemplate::UriTemplate;
+// use tokio_stream::Stream;
+
+use crate::DateTime;
+use crate::adapters::{Adapter, AdapterNew};
+use crate::public::Public;
 
 pub struct Private<Adapter> {
     _pub: Public<Adapter>,
@@ -54,13 +58,30 @@ impl<A> Private<A> {
     where
         A: Adapter<Vec<Transaction>> + 'static,
     {
-        let limit = 100;
-        let uri = UriTemplate::new("/accounts/{account}/transactions{?query*}")
+        let uri = UriTemplate::new("/accounts/{account}/transactions")
             .set("account", account_id.to_string())
-            .set("query", &[("limit", limit.to_string().as_ref())])
             .build();
         self.call_get(&uri)
     }
+
+    ///
+    /// **List transactions**
+    ///
+    /// Lists account’s transactions.
+    ///
+    /// https://developers.coinbase.com/api/v2#list-transactions
+    ///
+    // pub fn transactions_stream(&self, account_id: &Uuid) -> Result<Vec<Transaction>, std::io::Error> {
+    //     let limit = 100;
+    //     loop {
+    //         let uri = UriTemplate::new("/accounts/{account}/transactions{?query*}")
+    //             .set("account", account_id.to_string())
+    //             .set("query", &[("limit", limit.to_string().as_ref())])
+    //             .build();
+    //         let request = self.request(Method::GET, &uri, "".to_string());
+    //         self._pub.call_future_stream(request);
+    //     }
+    // }
 
     fn call_get<U>(&self, uri: &str) -> A::Result
     where
@@ -88,37 +109,37 @@ impl<A> Private<A> {
             .as_secs();
 
         let uri: Uri = (self._pub.uri.to_string() + _uri).parse().unwrap();
-
-        let mut req = Request::builder();
-        req.method(&method);
-        req.uri(&uri);
-
         let sign = Self::sign(
             &self.secret,
             timestamp,
-            method,
+            &method,
             &uri.path_and_query().unwrap().as_str(),
             &body_str,
         );
 
-        req.header("User-Agent", Public::<A>::USER_AGENT);
-        req.header("Content-Type", "Application/JSON");
+        Request::builder()
+            .method(&method)
+            .uri(&uri)
 
-        req.header("CB-VERSION", HeaderValue::from_str("2019-04-03").unwrap());
-        req.header("CB-ACCESS-KEY", HeaderValue::from_str(&self.key).unwrap());
-        req.header("CB-ACCESS-SIGN", HeaderValue::from_str(&sign).unwrap());
-        req.header(
-            "CB-ACCESS-TIMESTAMP",
-            HeaderValue::from_str(&timestamp.to_string()).unwrap(),
-        );
+            .header("User-Agent", Public::<A>::USER_AGENT)
+            .header("Content-Type", "Application/JSON")
 
-        req.body(body_str.into()).unwrap()
+            .header("CB-VERSION", HeaderValue::from_str("2019-04-03").unwrap())
+            .header("CB-ACCESS-KEY", HeaderValue::from_str(&self.key).unwrap())
+            .header("CB-ACCESS-SIGN", HeaderValue::from_str(&sign).unwrap())
+            .header(
+                "CB-ACCESS-TIMESTAMP",
+                HeaderValue::from_str(&timestamp.to_string()).unwrap(),
+            )
+
+            .body(body_str.into())
+            .unwrap()
     }
 
-    pub fn sign(
+    fn sign(
         secret: &str,
         timestamp: u64,
-        method: Method,
+        method: &Method,
         path: &str,
         body_str: &str,
     ) -> String {
