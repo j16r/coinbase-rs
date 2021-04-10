@@ -20,7 +20,7 @@ pub mod error;
 pub mod private;
 pub mod public;
 
-pub use adapters::Sync;
+pub use adapters::{ASync, Sync};
 pub use error::CBError;
 pub use private::Private;
 pub use public::Public;
