@@ -79,7 +79,7 @@ impl<A> Private<A> {
             .set("account", account_id.to_string())
             .set("query", &[("limit", limit.to_string().as_ref())])
             .build();
-        self.call_get_stream(&uri)
+        self._pub.fetch_stream(uri)
     }
 
     fn call_get<U>(&self, uri: &str) -> A::Result
@@ -91,16 +91,6 @@ impl<A> Private<A> {
         self.call(Method::GET, uri, "")
     }
 
-    fn call_get_stream<'a, U>(&'a self, uri: &str) -> impl Stream<Item = Result<U, CBError>> + 'a
-    where
-        A: Adapter<U> + 'static,
-        U: Send + 'static,
-        U: serde::de::DeserializeOwned,
-        U: std::marker::Unpin,
-    {
-        self.call_stream(Method::GET, uri, "")
-    }
-
     fn call<U>(&self, method: Method, uri: &str, body_str: &str) -> A::Result
     where
         A: Adapter<U> + 'static,
@@ -109,17 +99,6 @@ impl<A> Private<A> {
     {
         self._pub
             .call(self.request(method, uri, body_str.to_string()))
-    }
-
-    fn call_stream<'a, U>(&'a self, method: Method, uri: &str, body_str: &str) -> impl Stream<Item = Result<U, CBError>> + 'a
-    where
-        A: Adapter<U> + 'static,
-        U: Send + 'static,
-        U: serde::de::DeserializeOwned,
-        U: std::marker::Unpin,
-    {
-        let request = self.request(method, uri, body_str.to_string());
-        self._pub.call_stream(request)
     }
 
     fn request(&self, method: Method, _uri: &str, body_str: String) -> Request<Body> {

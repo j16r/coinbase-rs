@@ -80,7 +80,7 @@ impl<A> Public<A> {
         self.adapter.process(self.call_future(request))
     }
 
-    pub(crate) fn call_stream<'a, U>(&'a self, request: Request<Body>) -> impl Stream<Item = Result<U, CBError>> + 'a
+    pub(crate) fn fetch_stream<'a, U>(&'a self, uri: String) -> impl Stream<Item = Result<U, CBError>> + 'a
     where
         A: Adapter<U> + 'static,
         U: Send + 'static,
@@ -88,9 +88,15 @@ impl<A> Public<A> {
         U: std::marker::Unpin,
     {
         try_stream! {
-            let result = self.call_future(request).await?;
-
+            let initial_request = self.request(&uri);
+            let result = self.call_future(initial_request).await?;
             yield result.data;
+
+            while let(Some(ref next_uri)) = result.pagination.next_uri {
+                let request = self.request(next_uri);
+                let result = self.call_future(request).await?;
+                yield result.data;
+            }
         }
     }
 
@@ -207,67 +213,6 @@ pub struct Response<U> {
     pub pagination: Pagination,
     pub data: U,
 }
-
-// impl<'a, A, T> Future for Streamer<'a, A, T>
-//     where A: Adapter<T>,
-// {
-//     type Output = T;
-
-//     fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>)
-//         -> Poll<Self::Output>
-//     {
-//         Poll::Pending
-//         // if Instant::now() >= self.when {
-//         //     println!("Hello world");
-//         //     Poll::Ready("done")
-//         // } else {
-//         //     // Ignore this line for now.
-//         //     cx.waker().wake_by_ref();
-//         //     Poll::Pending
-//         // }
-//     }
-// }
-
-// struct Streamer<'a, A, T>
-//     where A: Adapter<T>,
-// {
-//     pub client: &'a Public<A>,
-//     pub request: Request<Body>,
-//     pub response: Option<Response<T>>,
-// }
-
-// impl<'a, A, T> Stream for Streamer<'a, A, T>
-//     where A: Adapter<T>,
-// {
-//     type Item = Result<T, CBError>;
-
-//     fn poll_next(mut self: Pin<&mut Self>, ctx: &mut Context<'_>)
-//         -> Poll<Option<Self::Item>>
-//     {
-//         // if self.response.pagination.next_starting_after.is_none() {
-//         //     return Poll::Ready(None);
-//         // }
-
-//         match Pin::new(&mut self).poll(ctx) {
-//             Poll::Ready(_) => {
-//                 self.client.call_future(self.request)
-//                     .and_then(|response| {
-//                         response.data
-//                     })
-//                     .try_collect()
-//                     .await;
-
-//                 // Poll::Ready(
-//                 //     Some(
-//                 //         self.response.and_then(|response| response.data).into()
-//                 //     )
-//                 // )
-//             }
-//             Poll::Pending => Poll::Pending,
-//         }
-//     }
-// }
-
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum Order {
