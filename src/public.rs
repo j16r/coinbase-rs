@@ -1,11 +1,13 @@
 use std::collections::HashMap;
+use std::future::Future;
 use std::thread;
 use std::time::Duration;
-use std::future::Future;
 
+use async_stream::try_stream;
 use bigdecimal::BigDecimal;
 use hyper::{Body, Client, client::HttpConnector, Request, Uri};
 use hyper_tls::HttpsConnector;
+use futures::stream::Stream;
 
 use crate::adapters::{Adapter, AdapterNew};
 use crate::DateTime;
@@ -76,6 +78,20 @@ impl<A> Public<A> {
         U: serde::de::DeserializeOwned,
     {
         self.adapter.process(self.call_future(request))
+    }
+
+    pub(crate) fn call_stream<'a, U>(&'a self, request: Request<Body>) -> impl Stream<Item = Result<U, CBError>> + 'a
+    where
+        A: Adapter<U> + 'static,
+        U: Send + 'static,
+        U: serde::de::DeserializeOwned,
+        U: std::marker::Unpin,
+    {
+        try_stream! {
+            let result = self.call_future(request).await?;
+
+            yield result.data;
+        }
     }
 
     fn get_pub<U>(&self, uri: &str) -> A::Result
@@ -191,6 +207,67 @@ pub struct Response<U> {
     pub pagination: Pagination,
     pub data: U,
 }
+
+// impl<'a, A, T> Future for Streamer<'a, A, T>
+//     where A: Adapter<T>,
+// {
+//     type Output = T;
+
+//     fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>)
+//         -> Poll<Self::Output>
+//     {
+//         Poll::Pending
+//         // if Instant::now() >= self.when {
+//         //     println!("Hello world");
+//         //     Poll::Ready("done")
+//         // } else {
+//         //     // Ignore this line for now.
+//         //     cx.waker().wake_by_ref();
+//         //     Poll::Pending
+//         // }
+//     }
+// }
+
+// struct Streamer<'a, A, T>
+//     where A: Adapter<T>,
+// {
+//     pub client: &'a Public<A>,
+//     pub request: Request<Body>,
+//     pub response: Option<Response<T>>,
+// }
+
+// impl<'a, A, T> Stream for Streamer<'a, A, T>
+//     where A: Adapter<T>,
+// {
+//     type Item = Result<T, CBError>;
+
+//     fn poll_next(mut self: Pin<&mut Self>, ctx: &mut Context<'_>)
+//         -> Poll<Option<Self::Item>>
+//     {
+//         // if self.response.pagination.next_starting_after.is_none() {
+//         //     return Poll::Ready(None);
+//         // }
+
+//         match Pin::new(&mut self).poll(ctx) {
+//             Poll::Ready(_) => {
+//                 self.client.call_future(self.request)
+//                     .and_then(|response| {
+//                         response.data
+//                     })
+//                     .try_collect()
+//                     .await;
+
+//                 // Poll::Ready(
+//                 //     Some(
+//                 //         self.response.and_then(|response| response.data).into()
+//                 //     )
+//                 // )
+//             }
+//             Poll::Pending => Poll::Pending,
+//         }
+//     }
+// }
+
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum Order {

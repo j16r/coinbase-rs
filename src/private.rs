@@ -1,16 +1,15 @@
 use std::time::{SystemTime, UNIX_EPOCH};
-// use std::pin::Pin;
-// use std::task::{Context, Poll};
 
 use bigdecimal::BigDecimal;
+use futures::stream::Stream;
 use hmac::{Hmac, Mac};
 use hyper::header::HeaderValue;
 use hyper::{Body, Method, Request, Uri};
 use sha2::Sha256;
-use uuid::Uuid;
 use uritemplate::UriTemplate;
-// use tokio_stream::Stream;
+use uuid::Uuid;
 
+use super::error::CBError;
 use crate::DateTime;
 use crate::adapters::{Adapter, AdapterNew};
 use crate::public::Public;
@@ -71,35 +70,56 @@ impl<A> Private<A> {
     ///
     /// https://developers.coinbase.com/api/v2#list-transactions
     ///
-    // pub fn transactions_stream(&self, account_id: &Uuid) -> Result<Vec<Transaction>, std::io::Error> {
-    //     let limit = 100;
-    //     loop {
-    //         let uri = UriTemplate::new("/accounts/{account}/transactions{?query*}")
-    //             .set("account", account_id.to_string())
-    //             .set("query", &[("limit", limit.to_string().as_ref())])
-    //             .build();
-    //         let request = self.request(Method::GET, &uri, "".to_string());
-    //         self._pub.call_future_stream(request);
-    //     }
-    // }
+    pub fn transactions_stream<'a>(&'a self, account_id: &Uuid) -> impl Stream<Item = Result<Vec<Transaction>, CBError>> + 'a
+    where
+        A: Adapter<Vec<Transaction>> + 'static,
+    {
+        let limit = 100;
+        let uri = UriTemplate::new("/accounts/{account}/transactions{?query*}")
+            .set("account", account_id.to_string())
+            .set("query", &[("limit", limit.to_string().as_ref())])
+            .build();
+        self.call_get_stream(&uri)
+    }
 
     fn call_get<U>(&self, uri: &str) -> A::Result
     where
         A: Adapter<U> + 'static,
         U: Send + 'static,
-        for<'de> U: serde::Deserialize<'de>,
+        U: serde::de::DeserializeOwned,
     {
         self.call(Method::GET, uri, "")
+    }
+
+    fn call_get_stream<'a, U>(&'a self, uri: &str) -> impl Stream<Item = Result<U, CBError>> + 'a
+    where
+        A: Adapter<U> + 'static,
+        U: Send + 'static,
+        U: serde::de::DeserializeOwned,
+        U: std::marker::Unpin,
+    {
+        self.call_stream(Method::GET, uri, "")
     }
 
     fn call<U>(&self, method: Method, uri: &str, body_str: &str) -> A::Result
     where
         A: Adapter<U> + 'static,
         U: Send + 'static,
-        for<'de> U: serde::Deserialize<'de>,
+        U: serde::de::DeserializeOwned,
     {
         self._pub
             .call(self.request(method, uri, body_str.to_string()))
+    }
+
+    fn call_stream<'a, U>(&'a self, method: Method, uri: &str, body_str: &str) -> impl Stream<Item = Result<U, CBError>> + 'a
+    where
+        A: Adapter<U> + 'static,
+        U: Send + 'static,
+        U: serde::de::DeserializeOwned,
+        U: std::marker::Unpin,
+    {
+        let request = self.request(method, uri, body_str.to_string());
+        self._pub.call_stream(request)
     }
 
     fn request(&self, method: Method, _uri: &str, body_str: String) -> Request<Body> {
