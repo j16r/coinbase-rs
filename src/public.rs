@@ -22,7 +22,7 @@ pub struct Public<Adapter> {
 impl<A> Public<A> {
     pub(crate) const USER_AGENT: &'static str = concat!("coinbase-rs/", env!("CARGO_PKG_VERSION"));
 
-    pub fn new_with_keep_alive(uri: &str, keep_alive: bool) -> Self
+    pub fn new(uri: &str) -> Self
     where
         A: AdapterNew,
     {
@@ -37,13 +37,6 @@ impl<A> Public<A> {
             client,
             adapter: A::new().expect("Failed to initialize adapter"),
         }
-    }
-
-    pub fn new(uri: &str) -> Self
-    where
-        A: AdapterNew,
-    {
-        Self::new_with_keep_alive(uri, true)
     }
 
     pub(crate) fn call_future<U>(
