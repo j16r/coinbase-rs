@@ -4,13 +4,14 @@ use std::time::Duration;
 
 use async_stream::try_stream;
 use bigdecimal::BigDecimal;
-use hyper::{Body, Client, client::HttpConnector, Request, Uri};
+use hyper::{Body, Client, client::HttpConnector, Uri};
 use hyper_tls::HttpsConnector;
 use futures::stream::Stream;
 use futures::Future;
 
-use crate::adapters::{Adapter, AdapterNew};
+use crate::request;
 use crate::DateTime;
+use crate::adapters::{Adapter, AdapterNew};
 use super::error::CBError;
 
 pub struct Public<Adapter> {
@@ -20,8 +21,6 @@ pub struct Public<Adapter> {
 }
 
 impl<A> Public<A> {
-    pub(crate) const USER_AGENT: &'static str = concat!("coinbase-rs/", env!("CARGO_PKG_VERSION"));
-
     pub fn new(uri: &str) -> Self
     where
         A: AdapterNew,
@@ -41,18 +40,21 @@ impl<A> Public<A> {
 
     pub(crate) fn call_future<U>(
         &self,
-        request: Request<Body>,
+        request: request::Builder,
     ) -> impl Future<Output = Result<Response<U>, CBError>>
     where
         U: serde::de::DeserializeOwned,
     {
         thread::sleep(Duration::from_millis(350));
 
+        let request = request.clone().build();
+        dbg!(&request);
         let request_future = self.client.request(request);
 
         async move {
             let response = request_future.await?;
             let body = hyper::body::to_bytes(response.into_body()).await?;
+            dbg!(&body);
 
             match serde_json::from_slice::<Response<U>>(&body) {
                 Ok(body) => Ok(body),
@@ -64,7 +66,7 @@ impl<A> Public<A> {
         }
     }
 
-    pub(crate) fn call<U>(&self, request: Request<Body>) -> A::Result
+    pub(crate) fn call<U>(&self, request: request::Builder) -> A::Result
     where
         A: Adapter<U> + 'static,
         U: Send + 'static,
@@ -73,7 +75,7 @@ impl<A> Public<A> {
         self.adapter.process(self.call_future(request))
     }
 
-    pub(crate) fn fetch_stream<'a, U>(&'a self, uri: String) -> impl Stream<Item = Result<U, CBError>> + 'a
+    pub(crate) fn fetch_stream<'a, U>(&'a self, request: request::Builder) -> impl Stream<Item = Result<U, CBError>> + 'a
     where
         A: Adapter<U> + 'static,
         U: Send + 'static,
@@ -81,12 +83,15 @@ impl<A> Public<A> {
         U: std::marker::Unpin,
     {
         try_stream! {
-            let initial_request = self.request(&uri);
+            let initial_request = request.clone();
+            dbg!(&initial_request);
             let result = self.call_future(initial_request).await?;
             yield result.data;
 
             while let(Some(ref next_uri)) = result.pagination.next_uri {
-                let request = self.request(next_uri);
+                let uri: Uri = (self.uri.to_string() + next_uri).parse().unwrap();
+                let request = request.clone().uri(uri);
+                dbg!(&request);
                 let result = self.call_future(request).await?;
                 yield result.data;
             }
@@ -102,13 +107,9 @@ impl<A> Public<A> {
         self.call(self.request(uri))
     }
 
-    fn request(&self, uri: &str) -> Request<Body> {
+    fn request(&self, uri: &str) -> request::Builder {
         let uri: Uri = (self.uri.to_string() + uri).parse().unwrap();
-
-        Request::get(uri)
-            .header("User-Agent", Self::USER_AGENT)
-            .body(Body::empty())
-            .unwrap()
+        request::Builder::new().uri(uri)
     }
 
     ///
@@ -124,7 +125,7 @@ impl<A> Public<A> {
     where
         A: Adapter<Vec<Currency>> + 'static,
     {
-        self.get_pub("/currencies")
+        self.get_pub("/v2/currencies")
     }
 
     ///
@@ -140,7 +141,7 @@ impl<A> Public<A> {
     where
         A: Adapter<ExchangeRates> + 'static,
     {
-        self.get_pub("/exchange-rates")
+        self.get_pub("/v2/exchange-rates")
     }
 
     ///
@@ -154,7 +155,7 @@ impl<A> Public<A> {
     where
         A: Adapter<CurrencyPrice> + 'static,
     {
-        self.get_pub(&format!("/currency_pair/{}/buy", currency_pair))
+        self.get_pub(&format!("/v2/currency_pair/{}/buy", currency_pair))
     }
 
     ///
@@ -168,7 +169,7 @@ impl<A> Public<A> {
     where
         A: Adapter<CurrencyPrice> + 'static,
     {
-        self.get_pub(&format!("/currency_pair/{}/sell", currency_pair))
+        self.get_pub(&format!("/v2/currency_pair/{}/sell", currency_pair))
     }
 
     ///
@@ -183,7 +184,7 @@ impl<A> Public<A> {
     where
         A: Adapter<CurrencyPrice> + 'static,
     {
-        self.get_pub(&format!("/currency_pair/{}/spot", currency_pair))
+        self.get_pub(&format!("/v2/currency_pair/{}/spot", currency_pair))
     }
 
     ///
@@ -197,7 +198,7 @@ impl<A> Public<A> {
     where
         A: Adapter<DateTime> + 'static,
     {
-        self.get_pub("/current_time")
+        self.get_pub("/v2/current_time")
     }
 }
 

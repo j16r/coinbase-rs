@@ -1,18 +1,15 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use bigdecimal::BigDecimal;
 use futures::stream::Stream;
-use hmac::{Hmac, Mac};
-use hyper::header::HeaderValue;
-use hyper::{Body, Method, Request, Uri};
-use sha2::Sha256;
+use hmac::Mac;
+use hyper::{Method, Uri};
 use uritemplate::UriTemplate;
 use uuid::Uuid;
 
-use super::error::CBError;
 use crate::DateTime;
 use crate::adapters::{Adapter, AdapterNew};
 use crate::public::Public;
+use crate::request;
+use super::error::CBError;
 
 pub struct Private<Adapter> {
     _pub: Public<Adapter>,
@@ -43,8 +40,17 @@ impl<A> Private<A> {
     where
         A: Adapter<Vec<Account>> + 'static,
     {
-        self.call_get("/accounts")
+        self.fetch("/v2/accounts")
     }
+
+    pub fn accounts_stream<'a>(&'a self) -> impl Stream<Item = Result<Vec<Account>, CBError>> + 'a
+    where
+        A: Adapter<Vec<Account>> + 'static,
+    {
+        let request = self.request("/v2/accounts");
+        self._pub.fetch_stream(request)
+    }
+
 
     ///
     /// **List transactions**
@@ -57,10 +63,10 @@ impl<A> Private<A> {
     where
         A: Adapter<Vec<Transaction>> + 'static,
     {
-        let uri = UriTemplate::new("/accounts/{account}/transactions")
+        let uri = UriTemplate::new("/v2/accounts/{account}/transactions")
             .set("account", account_id.to_string())
             .build();
-        self.call_get(&uri)
+        self.fetch(&uri)
     }
 
     ///
@@ -74,79 +80,29 @@ impl<A> Private<A> {
     where
         A: Adapter<Vec<Transaction>> + 'static,
     {
-        let limit = 100;
-        let uri = UriTemplate::new("/accounts/{account}/transactions{?query*}")
+        let limit = 5;
+        let uri = UriTemplate::new("/v2/accounts/{account}/transactions{?query*}")
             .set("account", account_id.to_string())
             .set("query", &[("limit", limit.to_string().as_ref())])
             .build();
-        self._pub.fetch_stream(uri)
+        let request = self.request(&uri);
+        self._pub.fetch_stream(request)
     }
 
-    fn call_get<U>(&self, uri: &str) -> A::Result
+    fn fetch<U>(&self, uri: &str) -> A::Result
     where
         A: Adapter<U> + 'static,
         U: Send + 'static,
         U: serde::de::DeserializeOwned,
     {
-        self.call(Method::GET, uri, "")
+        let request = self.request(uri);
+        self._pub.call(request)
     }
 
-    fn call<U>(&self, method: Method, uri: &str, body_str: &str) -> A::Result
-    where
-        A: Adapter<U> + 'static,
-        U: Send + 'static,
-        U: serde::de::DeserializeOwned,
-    {
-        self._pub
-            .call(self.request(method, uri, body_str.to_string()))
-    }
-
-    fn request(&self, method: Method, _uri: &str, body_str: String) -> Request<Body> {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("leap-second")
-            .as_secs();
-
+    fn request(&self, _uri: &str) -> request::Builder {
         let uri: Uri = (self._pub.uri.to_string() + _uri).parse().unwrap();
-        let sign = Self::sign(
-            &self.secret,
-            timestamp,
-            &method,
-            &uri.path_and_query().unwrap().as_str(),
-            &body_str,
-        );
-
-        Request::builder()
-            .method(&method)
-            .uri(&uri)
-
-            .header("User-Agent", Public::<A>::USER_AGENT)
-            .header("Content-Type", "Application/JSON")
-
-            .header("CB-VERSION", HeaderValue::from_str("2019-04-03").unwrap())
-            .header("CB-ACCESS-KEY", HeaderValue::from_str(&self.key).unwrap())
-            .header("CB-ACCESS-SIGN", HeaderValue::from_str(&sign).unwrap())
-            .header(
-                "CB-ACCESS-TIMESTAMP",
-                HeaderValue::from_str(&timestamp.to_string()).unwrap(),
-            )
-
-            .body(body_str.into())
-            .unwrap()
-    }
-
-    fn sign(
-        secret: &str,
-        timestamp: u64,
-        method: &Method,
-        path: &str,
-        body_str: &str,
-    ) -> String {
-        let mut mac: Hmac<Sha256> =
-            Hmac::new_varkey(&secret.as_bytes()).expect("Hmac::new(secret)");
-        let input = timestamp.to_string() + method.as_str() + path + body_str;
-        mac.input(input.as_bytes());
-        format!("{:x}", &mac.result().code())
+        request::Builder::new_with_auth(&self.key, &self.secret)
+            .uri(uri)
     }
 }
 

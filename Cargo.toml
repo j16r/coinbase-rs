@@ -18,14 +18,15 @@ chrono = { version = "0.4", features = [ "serde" ] }
 failure = "0.1"
 futures = "0.3"
 hmac = "0.7"
-hyper = { version = "0.14", features = [ "full" ] }
+http = "*"
+hyper = { version = "*", features = [ "full" ] }
 hyper-tls = "*"
 serde = "1.0"
 serde_derive = "*"
 serde_json = "*"
 sha2 = "0.8"
 thiserror = "1.0"
-tokio = { version = "1.4", features = [ "full" ] }
+tokio = { version = "*", features = [ "full" ] }
 tokio-stream = "*"
 uritemplate = "0.1.2"
 uuid = { version = "0.8.1", features = [ "serde", "v4" ] }
