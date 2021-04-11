@@ -39,11 +39,13 @@ impl<A> Private<A> {
     ///
     /// https://developers.coinbase.com/api/v2#list-accounts
     ///
-    pub fn accounts(&self) -> A::Result
-    where
-        A: Adapter<Vec<Account>> + 'static,
-    {
-        self.call_get("/accounts")
+    pub async fn accounts(&self) -> Result<Vec<Account>, CBError> {
+        let request = self.request(Method::GET, "/accounts", "".to_string());
+        let response = self._pub.call_future(request).await;
+        match response {
+            Ok(response) => Ok(response.data),
+            Err(e) => Err(e),
+        }
     }
 
     ///

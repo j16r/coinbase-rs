@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::future::Future;
+// use std::future::Future;
 use std::thread;
 use std::time::Duration;
 
@@ -8,6 +8,7 @@ use bigdecimal::BigDecimal;
 use hyper::{Body, Client, client::HttpConnector, Request, Uri};
 use hyper_tls::HttpsConnector;
 use futures::stream::Stream;
+use futures::Future;
 
 use crate::adapters::{Adapter, AdapterNew};
 use crate::DateTime;

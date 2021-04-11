@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::fmt::Debug;
-use std::future::Future;
 use std::io;
 
+use futures::Future;
 use tokio::runtime::Runtime;
 
 use super::error::CBError;
@@ -57,6 +57,7 @@ impl AdapterNew for ASync {
 
 impl<T> Adapter<T> for ASync {
     type Result = Box<dyn Future<Output = Result<T, CBError>> + Send>;
+
     fn process<F>(&self, f: F) -> Self::Result
     where
         F: Future<Output = Result<Response<T>, CBError>> + Send + 'static,

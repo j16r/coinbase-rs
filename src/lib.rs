@@ -1,4 +1,5 @@
 #![feature(async_stream)]
+#![feature(min_type_alias_impl_trait)]
 
 #[macro_use]
 extern crate serde_derive;
