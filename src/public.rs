@@ -218,8 +218,8 @@ pub enum Order {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Pagination {
-    pub ending_before: Option<DateTime>,
-    pub starting_after: Option<DateTime>,
+    pub ending_before: Option<String>,
+    pub starting_after: Option<String>,
     pub previous_ending_before: Option<String>,
     pub next_starting_after: Option<String>,
     pub limit: usize,
