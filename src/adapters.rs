@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::io;
+use std::pin::Pin;
 
 use futures::Future;
 use tokio::runtime::Runtime;
@@ -56,13 +57,13 @@ impl AdapterNew for ASync {
 }
 
 impl<T> Adapter<T> for ASync {
-    type Result = Box<dyn Future<Output = Result<T, CBError>> + Send>;
+    type Result = Pin<Box<dyn Future<Output = Result<T, CBError>> + Send>>;
 
     fn process<F>(&self, f: F) -> Self::Result
     where
         F: Future<Output = Result<Response<T>, CBError>> + Send + 'static,
     {
-        Box::new(async move {
+        Box::pin(async move {
             let response = f.await;
             match response {
                 Ok(response) => Ok(response.data),
