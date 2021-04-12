@@ -21,6 +21,4 @@ pub enum CBError {
     Serde(#[from] super::serde_json::Error),
     #[error("coinbase: {0}")]
     Coinbase(Error),
-    #[error("null")]
-    Null,
 }
