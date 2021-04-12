@@ -85,14 +85,14 @@ impl<A> Public<A> {
         try_stream! {
             let initial_request = request.clone();
             dbg!(&initial_request);
-            let result = self.call_future(initial_request).await?;
+            let mut result = self.call_future(initial_request).await?;
             yield result.data;
 
             while let(Some(ref next_uri)) = result.pagination.next_uri {
                 let uri: Uri = (self.uri.to_string() + next_uri).parse().unwrap();
                 let request = request.clone().uri(uri);
                 dbg!(&request);
-                let result = self.call_future(request).await?;
+                result = self.call_future(request).await?;
                 yield result.data;
             }
         }
