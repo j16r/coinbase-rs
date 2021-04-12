@@ -1,7 +1,6 @@
 use bigdecimal::BigDecimal;
 use futures::stream::Stream;
-use hmac::Mac;
-use hyper::{Method, Uri};
+use hyper::Uri;
 use uritemplate::UriTemplate;
 use uuid::Uuid;
 

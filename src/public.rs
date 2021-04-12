@@ -48,13 +48,11 @@ impl<A> Public<A> {
         thread::sleep(Duration::from_millis(350));
 
         let request = request.clone().build();
-        dbg!(&request);
         let request_future = self.client.request(request);
 
         async move {
             let response = request_future.await?;
             let body = hyper::body::to_bytes(response.into_body()).await?;
-            dbg!(&body);
 
             match serde_json::from_slice::<Response<U>>(&body) {
                 Ok(body) => Ok(body),
@@ -84,14 +82,12 @@ impl<A> Public<A> {
     {
         try_stream! {
             let initial_request = request.clone();
-            dbg!(&initial_request);
             let mut result = self.call_future(initial_request).await?;
             yield result.data;
 
             while let(Some(ref next_uri)) = result.pagination.next_uri {
                 let uri: Uri = (self.uri.to_string() + next_uri).parse().unwrap();
                 let request = request.clone().uri(uri);
-                dbg!(&request);
                 result = self.call_future(request).await?;
                 yield result.data;
             }
