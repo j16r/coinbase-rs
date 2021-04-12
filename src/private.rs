@@ -80,7 +80,7 @@ impl<A> Private<A> {
     where
         A: Adapter<Vec<Transaction>> + 'static,
     {
-        let limit = 5;
+        let limit = 100;
         let uri = UriTemplate::new("/v2/accounts/{account}/transactions{?query*}")
             .set("account", account_id.to_string())
             .set("query", &[("limit", limit.to_string().as_ref())])
