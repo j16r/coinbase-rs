@@ -1,6 +1,3 @@
-#![feature(async_stream)]
-#![feature(min_type_alias_impl_trait)]
-
 extern crate base64;
 extern crate failure;
 extern crate futures;
