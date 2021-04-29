@@ -86,7 +86,7 @@ impl<A> Public<A> {
             let mut result = self.call_future(initial_request).await?;
             yield result.data;
 
-            while let(Some(ref next_uri)) = result.pagination.next_uri {
+            while let(Some(ref next_uri)) = result.pagination.and_then(|p| p.next_uri) {
                 let uri: Uri = (self.uri.to_string() + next_uri).parse().unwrap();
                 let request = request.clone().uri(uri);
                 result = self.call_future(request).await?;
@@ -151,11 +151,14 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#get-buy-price
     ///
-    pub fn buy_price(&self, currency_pair: &str) -> A::Result
+    pub fn buy_price(&self, pair: &str) -> A::Result
     where
         A: Adapter<CurrencyPrice> + 'static,
     {
-        self.get_pub(&format!("/v2/currency_pair/{}/buy", currency_pair))
+        let uri = UriTemplate::new("/v2/currency_pair/{pair}")
+            .set(&"pair", pair)
+            .build();
+        self.get_pub(&uri)
     }
 
     ///
@@ -196,15 +199,21 @@ impl<A> Public<A> {
     ///
     pub fn current_time(&self) -> A::Result
     where
-        A: Adapter<DateTime> + 'static,
+        A: Adapter<Time> + 'static,
     {
-        self.get_pub("/v2/current_time")
+        self.get_pub("/v2/time")
     }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+pub struct Time {
+    iso: DateTime,
+    epoch: u64,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Response<U> {
-    pub pagination: Pagination,
+    pub pagination: Option<Pagination>,
     pub data: U,
 }
 
