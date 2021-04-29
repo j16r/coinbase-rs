@@ -27,4 +27,6 @@ pub use public::Public;
 
 pub const MAIN_URL: &str = "https://api.coinbase.com";
 
+pub use uuid::Uuid as Uuid;
+
 pub type DateTime = chrono::DateTime<chrono::Utc>;
