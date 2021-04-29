@@ -46,6 +46,7 @@ impl<A> Public<A> {
     where
         U: serde::de::DeserializeOwned,
     {
+        // TODO: This is for rate limiting purposes, but this is super-hacky
         thread::sleep(Duration::from_millis(350));
 
         let request = request.clone().build();
