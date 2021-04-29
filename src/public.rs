@@ -4,10 +4,11 @@ use std::time::Duration;
 
 use async_stream::try_stream;
 use bigdecimal::BigDecimal;
+use futures::Future;
+use futures::stream::Stream;
 use hyper::{Body, Client, client::HttpConnector, Uri};
 use hyper_tls::HttpsConnector;
-use futures::stream::Stream;
-use futures::Future;
+use uritemplate::UriTemplate;
 
 use crate::request;
 use crate::DateTime;
@@ -133,11 +134,14 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#exchange-rates
     ///
-    pub fn exchange_rates(&self) -> A::Result
+    pub fn exchange_rates(&self, currency: &str) -> A::Result
     where
         A: Adapter<ExchangeRates> + 'static,
     {
-        self.get_pub("/v2/exchange-rates")
+        let uri = UriTemplate::new("/v2/exchange-rates{?query*}")
+            .set(&"currency", currency)
+            .build();
+        self.get_pub(&uri)
     }
 
     ///
