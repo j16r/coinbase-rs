@@ -25,41 +25,46 @@ coinbase-rs = "0.3.0"
 ```rust
 use coinbase_rs::{Public, MAIN_URL};
 
-#[
-fn main() {
-    let client: Public<Sync> = Public::new(MAIN_URL);
-
-    for currency in client.currencies().unwrap() {
-        println!(
-            "Currency {} mininum size = {}",
-            currency.name, currency.min_size
-        );
-    }
+#[tokio::main]
+async fn main() {
+    let client = Public::new(MAIN_URL);
+    println!("Server time is {:?}", client.current_time().await.unwrap());
 }
 ```
 
 ### Private API
 
 ```rust
-use coinbase_rs::{Private, Sync, MAIN_URL};
+use coinbase_rs::{Private, MAIN_URL, Uuid};
+use futures::pin_mut;
+use futures::stream::StreamExt;
 use std::str::FromStr;
-use uuid::Uuid;
 
 pub const KEY: &str = "<put key here>";
 pub const SECRET: &str = "<put secret here>";
 
-fn main() {
-    let client: Private<Sync> = Private::new(MAIN_URL, KEY, SECRET);
+#[tokio::main]
+async fn main() {
+    let client = Private::new(MAIN_URL, KEY, SECRET);
 
-    let accounts = client.accounts().unwrap();
-    for account in accounts {
-        println!("Account {}", account.currency.code);
-        if let Ok(id) = Uuid::from_str(&account.id) {
-            for transaction in client.list_transactions(&id).unwrap() {
-                println!(
-                    "Transaction {} = {}",
-                    transaction.id, transaction.amount.amount
-                );
+    let accounts = client.accounts();
+    pin_mut!(accounts);
+
+    while let Some(account_result) = accounts.next().await {
+        for account in account_result.unwrap() {
+            println!("Account {}", account.currency.code);
+            if let Ok(id) = Uuid::from_str(&account.id) {
+                let transactions = client.transactions(&id);
+                pin_mut!(transactions);
+
+                while let Some(transactions_result) = transactions.next().await {
+                    for transaction in transactions_result.unwrap() {
+                        println!(
+                            "Transaction {} = {}",
+                            transaction.id, transaction.amount.amount
+                        );
+                    }
+                }
             }
         }
     }
