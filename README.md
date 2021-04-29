@@ -8,8 +8,8 @@ Coinbase Pro API.
 
 ## Features
 
-- Sync and Async support
 - Private and Public API
+- Pagination through streams
 
 ## Examples
 
@@ -17,14 +17,15 @@ Cargo.toml:
 
 ```toml
 [dependencies]
-coinbase-rs = "0.2.0"
+coinbase-rs = "0.3.0"
 ```
 
-### Public API (Sync)
+### Public API
 
 ```rust
-use coinbase_rs::{Public, Sync, MAIN_URL};
+use coinbase_rs::{Public, MAIN_URL};
 
+#[
 fn main() {
     let client: Public<Sync> = Public::new(MAIN_URL);
 
@@ -37,7 +38,7 @@ fn main() {
 }
 ```
 
-### Private API (Sync)
+### Private API
 
 ```rust
 use coinbase_rs::{Private, Sync, MAIN_URL};

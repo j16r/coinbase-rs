@@ -4,23 +4,16 @@ use hyper::Uri;
 use uritemplate::UriTemplate;
 use uuid::Uuid;
 
-use crate::DateTime;
-use crate::adapters::{Adapter, AdapterNew};
-use crate::public::Public;
-use crate::request;
-use super::error::CBError;
+use crate::{DateTime, request, Result, public::Public};
 
-pub struct Private<Adapter> {
-    _pub: Public<Adapter>,
+pub struct Private {
+    _pub: Public,
     key: String,
     secret: String,
 }
 
-impl<A> Private<A> {
-    pub fn new(uri: &str, key: &str, secret: &str) -> Self
-    where
-        A: AdapterNew,
-    {
+impl Private {
+    pub fn new(uri: &str, key: &str, secret: &str) -> Self {
         Self {
             _pub: Public::new(uri),
             key: key.to_string(),
@@ -35,23 +28,17 @@ impl<A> Private<A> {
     ///
     /// https://developers.coinbase.com/api/v2#list-accounts
     ///
-    pub fn accounts(&self) -> A::Result
-    where
-        A: Adapter<Vec<Account>> + 'static,
-    {
-        self.fetch("/v2/accounts")
+    pub async fn accounts(&self) -> Result<Vec<Account>> {
+        self.get("/v2/accounts").await
     }
 
-    pub fn accounts_stream<'a>(&'a self) -> impl Stream<Item = Result<Vec<Account>, CBError>> + 'a
-    where
-        A: Adapter<Vec<Account>> + 'static,
-    {
+    pub fn accounts_stream<'a>(&'a self) -> impl Stream<Item = Result<Vec<Account>>> + 'a {
         let limit = 100;
         let uri = UriTemplate::new("/v2/accounts{?query*}")
             .set("query", &[("limit", limit.to_string().as_ref())])
             .build();
         let request = self.request(&uri);
-        self._pub.fetch_stream(request)
+        self._pub.get_stream(request)
     }
 
 
@@ -62,14 +49,11 @@ impl<A> Private<A> {
     ///
     /// https://developers.coinbase.com/api/v2#list-transactions
     ///
-    pub fn transactions(&self, account_id: &Uuid) -> A::Result
-    where
-        A: Adapter<Vec<Transaction>> + 'static,
-    {
+    pub async fn transactions(&self, account_id: &Uuid) -> Result<Vec<Transaction>> {
         let uri = UriTemplate::new("/v2/accounts/{account}/transactions")
             .set("account", account_id.to_string())
             .build();
-        self.fetch(&uri)
+        self.get(&uri).await
     }
 
     ///
@@ -79,27 +63,23 @@ impl<A> Private<A> {
     ///
     /// https://developers.coinbase.com/api/v2#list-transactions
     ///
-    pub fn transactions_stream<'a>(&'a self, account_id: &Uuid) -> impl Stream<Item = Result<Vec<Transaction>, CBError>> + 'a
-    where
-        A: Adapter<Vec<Transaction>> + 'static,
-    {
+    pub fn transactions_stream<'a>(&'a self, account_id: &Uuid) -> impl Stream<Item = Result<Vec<Transaction>>> + 'a {
         let limit = 100;
         let uri = UriTemplate::new("/v2/accounts/{account}/transactions{?query*}")
             .set("account", account_id.to_string())
             .set("query", &[("limit", limit.to_string().as_ref())])
             .build();
         let request = self.request(&uri);
-        self._pub.fetch_stream(request)
+        self._pub.get_stream(request)
     }
 
-    fn fetch<U>(&self, uri: &str) -> A::Result
+    async fn get<U>(&self, uri: &str) -> Result<U>
     where
-        A: Adapter<U> + 'static,
         U: Send + 'static,
         U: serde::de::DeserializeOwned,
     {
-        let request = self.request(uri);
-        self._pub.call(request)
+        let result = self._pub.make_request(self.request(uri)).await?;
+        Ok(result.data)
     }
 
     fn request(&self, _uri: &str) -> request::Builder {

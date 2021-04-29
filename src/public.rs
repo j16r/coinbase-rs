@@ -4,28 +4,20 @@ use std::time::Duration;
 
 use async_stream::try_stream;
 use bigdecimal::BigDecimal;
-use futures::Future;
 use futures::stream::Stream;
 use hyper::{Body, Client, client::HttpConnector, Uri};
 use hyper_tls::HttpsConnector;
 use uritemplate::UriTemplate;
 
-use crate::request;
-use crate::DateTime;
-use crate::adapters::{Adapter, AdapterNew};
-use super::error::CBError;
+use crate::{CBError, Result, request, DateTime};
 
-pub struct Public<Adapter> {
+pub struct Public {
     pub(crate) uri: String,
-    pub(crate) adapter: Adapter,
     client: Client<HttpsConnector<HttpConnector>>,
 }
 
-impl<A> Public<A> {
-    pub fn new(uri: &str) -> Self
-    where
-        A: AdapterNew,
-    {
+impl Public {
+    pub fn new(uri: &str) -> Self {
         let https = HttpsConnector::new();
         let client = Client::builder()
             .pool_idle_timeout(Duration::from_secs(30))
@@ -35,7 +27,6 @@ impl<A> Public<A> {
         Self {
             uri,
             client,
-            adapter: A::new().expect("Failed to initialize adapter"),
         }
     }
 
@@ -48,11 +39,8 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#currencies
     ///
-    pub fn currencies(&self) -> A::Result
-    where
-        A: Adapter<Vec<Currency>> + 'static,
-    {
-        self.get_pub("/v2/currencies")
+    pub async fn currencies(&self) -> Result<Vec<Currency>> {
+        self.get("/v2/currencies").await
     }
 
     ///
@@ -64,14 +52,11 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#exchange-rates
     ///
-    pub fn exchange_rates(&self, currency: &str) -> A::Result
-    where
-        A: Adapter<ExchangeRates> + 'static,
-    {
+    pub async fn exchange_rates(&self, currency: &str) -> Result<ExchangeRates> {
         let uri = UriTemplate::new("/v2/exchange-rates{?query*}")
             .set(&"currency", currency)
             .build();
-        self.get_pub(&uri)
+        self.get(&uri).await
     }
 
     ///
@@ -81,14 +66,11 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#get-buy-price
     ///
-    pub fn buy_price(&self, pair: &str) -> A::Result
-    where
-        A: Adapter<CurrencyPrice> + 'static,
-    {
+    pub async fn buy_price(&self, pair: &str) -> Result<CurrencyPrice> {
         let uri = UriTemplate::new("/v2/currency_pair/{pair}")
             .set(&"pair", pair)
             .build();
-        self.get_pub(&uri)
+        self.get(&uri).await
     }
 
     ///
@@ -98,11 +80,8 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#get-sell-price
     ///
-    pub fn sell_price(&self, currency_pair: &str) -> A::Result
-    where
-        A: Adapter<CurrencyPrice> + 'static,
-    {
-        self.get_pub(&format!("/v2/currency_pair/{}/sell", currency_pair))
+    pub async fn sell_price(&self, currency_pair: &str) -> Result<CurrencyPrice> {
+        self.get(&format!("/v2/currency_pair/{}/sell", currency_pair)).await
     }
 
     ///
@@ -113,11 +92,8 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#get-spot-price
     ///
-    pub fn spot_price(&self, currency_pair: &str, _date: Option<chrono::NaiveDate>) -> A::Result
-    where
-        A: Adapter<CurrencyPrice> + 'static,
-    {
-        self.get_pub(&format!("/v2/currency_pair/{}/spot", currency_pair))
+    pub async fn spot_price(&self, currency_pair: &str, _date: Option<chrono::NaiveDate>) -> Result<CurrencyPrice> {
+        self.get(&format!("/v2/currency_pair/{}/spot", currency_pair)).await
     }
 
     ///
@@ -127,17 +103,11 @@ impl<A> Public<A> {
     ///
     /// https://developers.coinbase.com/api/v2#time
     ///
-    pub fn current_time(&self) -> A::Result
-    where
-        A: Adapter<Time> + 'static,
-    {
-        self.get_pub("/v2/time")
+    pub async fn current_time(&self) -> Result<Time> {
+        self.get("/v2/time").await
     }
 
-    pub(crate) fn call_future<U>(
-        &self,
-        request: request::Builder,
-    ) -> impl Future<Output = Result<Response<U>, CBError>>
+    pub(crate) async fn make_request<U>(&self, request: request::Builder) -> Result<Response<U>>
     where
         U: serde::de::DeserializeOwned,
     {
@@ -147,57 +117,45 @@ impl<A> Public<A> {
         let request = request.clone().build();
         let request_future = self.client.request(request);
 
-        async move {
-            let response = request_future.await?;
-            let body = hyper::body::to_bytes(response.into_body()).await?;
+        let response = request_future.await?;
+        let body = hyper::body::to_bytes(response.into_body()).await?;
 
-            match serde_json::from_slice::<Response<U>>(&body) {
-                Ok(body) => Ok(body),
-                Err(e) => match serde_json::from_slice(&body) {
-                    Ok(coinbase_err) => Err(CBError::Coinbase(coinbase_err)),
-                    Err(_) => Err(CBError::Serde(e)),
-                },
-            }
+        match serde_json::from_slice::<Response<U>>(&body) {
+            Ok(body) => Ok(body),
+            Err(e) => match serde_json::from_slice(&body) {
+                Ok(coinbase_err) => Err(CBError::Coinbase(coinbase_err)),
+                Err(_) => Err(CBError::Serde(e)),
+            },
         }
     }
 
-    pub(crate) fn call<U>(&self, request: request::Builder) -> A::Result
+    pub(crate) fn get_stream<'a, U>(&'a self, request: request::Builder) -> impl Stream<Item = Result<U>> + 'a
     where
-        A: Adapter<U> + 'static,
-        U: Send + 'static,
-        U: serde::de::DeserializeOwned,
-    {
-        self.adapter.process(self.call_future(request))
-    }
-
-    pub(crate) fn fetch_stream<'a, U>(&'a self, request: request::Builder) -> impl Stream<Item = Result<U, CBError>> + 'a
-    where
-        A: Adapter<U> + 'static,
         U: Send + 'static,
         U: serde::de::DeserializeOwned,
         U: std::marker::Unpin,
     {
         try_stream! {
             let initial_request = request.clone();
-            let mut result = self.call_future(initial_request).await?;
+            let mut result = self.make_request(initial_request).await?;
             yield result.data;
 
             while let(Some(ref next_uri)) = result.pagination.and_then(|p| p.next_uri) {
                 let uri: Uri = (self.uri.to_string() + next_uri).parse().unwrap();
                 let request = request.clone().uri(uri);
-                result = self.call_future(request).await?;
+                result = self.make_request(request).await?;
                 yield result.data;
             }
         }
     }
 
-    fn get_pub<U>(&self, uri: &str) -> A::Result
+    async fn get<U>(&self, uri: &str) -> Result<U>
     where
-        A: Adapter<U> + 'static,
         U: Send + 'static,
         U: serde::de::DeserializeOwned,
     {
-        self.call(self.request(uri))
+        let result = self.make_request(self.request(uri)).await?;
+        Ok(result.data)
     }
 
     fn request(&self, uri: &str) -> request::Builder {
