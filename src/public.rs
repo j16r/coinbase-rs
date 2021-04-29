@@ -39,77 +39,6 @@ impl<A> Public<A> {
         }
     }
 
-    pub(crate) fn call_future<U>(
-        &self,
-        request: request::Builder,
-    ) -> impl Future<Output = Result<Response<U>, CBError>>
-    where
-        U: serde::de::DeserializeOwned,
-    {
-        // TODO: This is for rate limiting purposes, but this is super-hacky
-        thread::sleep(Duration::from_millis(350));
-
-        let request = request.clone().build();
-        let request_future = self.client.request(request);
-
-        async move {
-            let response = request_future.await?;
-            let body = hyper::body::to_bytes(response.into_body()).await?;
-
-            match serde_json::from_slice::<Response<U>>(&body) {
-                Ok(body) => Ok(body),
-                Err(e) => match serde_json::from_slice(&body) {
-                    Ok(coinbase_err) => Err(CBError::Coinbase(coinbase_err)),
-                    Err(_) => Err(CBError::Serde(e)),
-                },
-            }
-        }
-    }
-
-    pub(crate) fn call<U>(&self, request: request::Builder) -> A::Result
-    where
-        A: Adapter<U> + 'static,
-        U: Send + 'static,
-        U: serde::de::DeserializeOwned,
-    {
-        self.adapter.process(self.call_future(request))
-    }
-
-    pub(crate) fn fetch_stream<'a, U>(&'a self, request: request::Builder) -> impl Stream<Item = Result<U, CBError>> + 'a
-    where
-        A: Adapter<U> + 'static,
-        U: Send + 'static,
-        U: serde::de::DeserializeOwned,
-        U: std::marker::Unpin,
-    {
-        try_stream! {
-            let initial_request = request.clone();
-            let mut result = self.call_future(initial_request).await?;
-            yield result.data;
-
-            while let(Some(ref next_uri)) = result.pagination.and_then(|p| p.next_uri) {
-                let uri: Uri = (self.uri.to_string() + next_uri).parse().unwrap();
-                let request = request.clone().uri(uri);
-                result = self.call_future(request).await?;
-                yield result.data;
-            }
-        }
-    }
-
-    fn get_pub<U>(&self, uri: &str) -> A::Result
-    where
-        A: Adapter<U> + 'static,
-        U: Send + 'static,
-        U: serde::de::DeserializeOwned,
-    {
-        self.call(self.request(uri))
-    }
-
-    fn request(&self, uri: &str) -> request::Builder {
-        let uri: Uri = (self.uri.to_string() + uri).parse().unwrap();
-        request::Builder::new().uri(uri)
-    }
-
     ///
     /// **Get currencies**
     ///
@@ -204,6 +133,78 @@ impl<A> Public<A> {
     {
         self.get_pub("/v2/time")
     }
+
+    pub(crate) fn call_future<U>(
+        &self,
+        request: request::Builder,
+    ) -> impl Future<Output = Result<Response<U>, CBError>>
+    where
+        U: serde::de::DeserializeOwned,
+    {
+        // TODO: This is for rate limiting purposes, but this is super-hacky
+        thread::sleep(Duration::from_millis(350));
+
+        let request = request.clone().build();
+        let request_future = self.client.request(request);
+
+        async move {
+            let response = request_future.await?;
+            let body = hyper::body::to_bytes(response.into_body()).await?;
+
+            match serde_json::from_slice::<Response<U>>(&body) {
+                Ok(body) => Ok(body),
+                Err(e) => match serde_json::from_slice(&body) {
+                    Ok(coinbase_err) => Err(CBError::Coinbase(coinbase_err)),
+                    Err(_) => Err(CBError::Serde(e)),
+                },
+            }
+        }
+    }
+
+    pub(crate) fn call<U>(&self, request: request::Builder) -> A::Result
+    where
+        A: Adapter<U> + 'static,
+        U: Send + 'static,
+        U: serde::de::DeserializeOwned,
+    {
+        self.adapter.process(self.call_future(request))
+    }
+
+    pub(crate) fn fetch_stream<'a, U>(&'a self, request: request::Builder) -> impl Stream<Item = Result<U, CBError>> + 'a
+    where
+        A: Adapter<U> + 'static,
+        U: Send + 'static,
+        U: serde::de::DeserializeOwned,
+        U: std::marker::Unpin,
+    {
+        try_stream! {
+            let initial_request = request.clone();
+            let mut result = self.call_future(initial_request).await?;
+            yield result.data;
+
+            while let(Some(ref next_uri)) = result.pagination.and_then(|p| p.next_uri) {
+                let uri: Uri = (self.uri.to_string() + next_uri).parse().unwrap();
+                let request = request.clone().uri(uri);
+                result = self.call_future(request).await?;
+                yield result.data;
+            }
+        }
+    }
+
+    fn get_pub<U>(&self, uri: &str) -> A::Result
+    where
+        A: Adapter<U> + 'static,
+        U: Send + 'static,
+        U: serde::de::DeserializeOwned,
+    {
+        self.call(self.request(uri))
+    }
+
+    fn request(&self, uri: &str) -> request::Builder {
+        let uri: Uri = (self.uri.to_string() + uri).parse().unwrap();
+        request::Builder::new().uri(uri)
+    }
+
 }
 
 #[derive(Deserialize, Serialize, Debug)]
