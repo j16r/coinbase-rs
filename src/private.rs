@@ -28,11 +28,7 @@ impl Private {
     ///
     /// https://developers.coinbase.com/api/v2#list-accounts
     ///
-    pub async fn accounts(&self) -> Result<Vec<Account>> {
-        self.get("/v2/accounts").await
-    }
-
-    pub fn accounts_stream<'a>(&'a self) -> impl Stream<Item = Result<Vec<Account>>> + 'a {
+    pub fn accounts<'a>(&'a self) -> impl Stream<Item = Result<Vec<Account>>> + 'a {
         let limit = 100;
         let uri = UriTemplate::new("/v2/accounts{?query*}")
             .set("query", &[("limit", limit.to_string().as_ref())])
@@ -49,21 +45,7 @@ impl Private {
     ///
     /// https://developers.coinbase.com/api/v2#list-transactions
     ///
-    pub async fn transactions(&self, account_id: &Uuid) -> Result<Vec<Transaction>> {
-        let uri = UriTemplate::new("/v2/accounts/{account}/transactions")
-            .set("account", account_id.to_string())
-            .build();
-        self.get(&uri).await
-    }
-
-    ///
-    /// **List transactions**
-    ///
-    /// Lists account’s transactions.
-    ///
-    /// https://developers.coinbase.com/api/v2#list-transactions
-    ///
-    pub fn transactions_stream<'a>(&'a self, account_id: &Uuid) -> impl Stream<Item = Result<Vec<Transaction>>> + 'a {
+    pub fn transactions<'a>(&'a self, account_id: &Uuid) -> impl Stream<Item = Result<Vec<Transaction>>> + 'a {
         let limit = 100;
         let uri = UriTemplate::new("/v2/accounts/{account}/transactions{?query*}")
             .set("account", account_id.to_string())
@@ -71,15 +53,6 @@ impl Private {
             .build();
         let request = self.request(&uri);
         self._pub.get_stream(request)
-    }
-
-    async fn get<U>(&self, uri: &str) -> Result<U>
-    where
-        U: Send + 'static,
-        U: serde::de::DeserializeOwned,
-    {
-        let result = self._pub.make_request(self.request(uri)).await?;
-        Ok(result.data)
     }
 
     fn request(&self, _uri: &str) -> request::Builder {
