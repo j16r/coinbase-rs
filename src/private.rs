@@ -46,7 +46,11 @@ impl<A> Private<A> {
     where
         A: Adapter<Vec<Account>> + 'static,
     {
-        let request = self.request("/v2/accounts");
+        let limit = 100;
+        let uri = UriTemplate::new("/v2/accounts{?query*}")
+            .set("query", &[("limit", limit.to_string().as_ref())])
+            .build();
+        let request = self.request(&uri);
         self._pub.fetch_stream(request)
     }
 
