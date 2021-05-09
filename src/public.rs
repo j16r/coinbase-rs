@@ -72,7 +72,7 @@ impl Public {
     /// https://developers.coinbase.com/api/v2#get-buy-price
     ///
     pub async fn buy_price(&self, pair: &str) -> Result<CurrencyPrice> {
-        let uri = UriTemplate::new("/v2/currency_pair/{pair}")
+        let uri = UriTemplate::new("/v2/prices/{pair}")
             .set(&"pair", pair)
             .build();
         self.get(&uri).await
@@ -86,7 +86,7 @@ impl Public {
     /// https://developers.coinbase.com/api/v2#get-sell-price
     ///
     pub async fn sell_price(&self, currency_pair: &str) -> Result<CurrencyPrice> {
-        self.get(&format!("/v2/currency_pair/{}/sell", currency_pair)).await
+        self.get(&format!("/v2/prices/{}/sell", currency_pair)).await
     }
 
     ///
@@ -98,7 +98,7 @@ impl Public {
     /// https://developers.coinbase.com/api/v2#get-spot-price
     ///
     pub async fn spot_price(&self, currency_pair: &str, _date: Option<chrono::NaiveDate>) -> Result<CurrencyPrice> {
-        self.get(&format!("/v2/currency_pair/{}/spot", currency_pair)).await
+        self.get(&format!("/v2/prices/{}/spot", currency_pair)).await
     }
 
     ///
