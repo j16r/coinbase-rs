@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::result;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, NewMac, Mac};
 use sha2::Sha256;
 use http::{request, Request, Version, Method, Uri};
 use hyper::Body;
@@ -139,10 +139,10 @@ impl Builder {
         body: &Vec<u8>,
     ) -> String {
         let mut mac: Hmac<Sha256> =
-            Hmac::new_varkey(&secret.as_bytes()).expect("Hmac::new(secret)");
+            Hmac::new_from_slice(&secret.as_bytes()).expect("Hmac::new(secret)");
         let input = timestamp.to_string() + method.as_str() + path;
-        mac.input(input.as_bytes());
-        mac.input(body);
-        format!("{:x}", &mac.result().code())
+        mac.update(input.as_bytes());
+        mac.update(body);
+        format!("{:x}", &mac.finalize().into_bytes())
     }
 }
