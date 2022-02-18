@@ -13,7 +13,7 @@ keywords = [ "exchange", "coinbase", "bitcoin" ]
 [dependencies]
 async-stream = "0.3"
 base64 = "0.10"
-bigdecimal = { version = "0.2", features = [ "serde" ] }
+bigdecimal = { version = "*", features = [ "serde" ] }
 chrono = { version = "0.4", features = [ "serde" ] }
 failure = "0.1"
 futures = "0.3"
