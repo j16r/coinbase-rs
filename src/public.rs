@@ -59,7 +59,7 @@ impl Public {
     ///
     pub async fn exchange_rates(&self, currency: &str) -> Result<ExchangeRates> {
         let uri = UriTemplate::new("/v2/exchange-rates{?query*}")
-            .set(&"currency", currency)
+            .set("currency", currency)
             .build();
         self.get(&uri).await
     }
@@ -73,7 +73,7 @@ impl Public {
     ///
     pub async fn buy_price(&self, pair: &str) -> Result<CurrencyPrice> {
         let uri = UriTemplate::new("/v2/currency_pair/{pair}")
-            .set(&"pair", pair)
+            .set("pair", pair)
             .build();
         self.get(&uri).await
     }
