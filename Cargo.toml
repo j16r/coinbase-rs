@@ -2,7 +2,7 @@
 name = "coinbase-rs"
 version = "0.3.0"
 authors = ["John Barker <dev@j16r.net>"]
-edition = "2018"
+edition = "2021"
 description = "Coinbase client for Rust"
 repository = "https://github.com/j16r/coinbase-rs"
 license = "MIT/Apache-2.0"

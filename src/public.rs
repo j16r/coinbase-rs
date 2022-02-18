@@ -221,7 +221,7 @@ pub struct CurrencyPrice {
     pub currency: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct CurrentTime {
     iso: DateTime,
 }
