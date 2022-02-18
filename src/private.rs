@@ -4,7 +4,7 @@ use hyper::Uri;
 use uritemplate::UriTemplate;
 use uuid::Uuid;
 
-use crate::{DateTime, request, Result, public::Public};
+use crate::{public::Public, request, DateTime, Result};
 
 pub struct Private {
     _pub: Public,
@@ -37,7 +37,6 @@ impl Private {
         self._pub.get_stream(request)
     }
 
-
     ///
     /// **List transactions**
     ///
@@ -45,7 +44,10 @@ impl Private {
     ///
     /// https://developers.coinbase.com/api/v2#list-transactions
     ///
-    pub fn transactions<'a>(&'a self, account_id: &Uuid) -> impl Stream<Item = Result<Vec<Transaction>>> + 'a {
+    pub fn transactions<'a>(
+        &'a self,
+        account_id: &Uuid,
+    ) -> impl Stream<Item = Result<Vec<Transaction>>> + 'a {
         let limit = 100;
         let uri = UriTemplate::new("/v2/accounts/{account}/transactions{?query*}")
             .set("account", account_id.to_string())
@@ -57,8 +59,7 @@ impl Private {
 
     fn request(&self, _uri: &str) -> request::Builder {
         let uri: Uri = (self._pub.uri.to_string() + _uri).parse().unwrap();
-        request::Builder::new_with_auth(&self.key, &self.secret)
-            .uri(uri)
+        request::Builder::new_with_auth(&self.key, &self.secret).uri(uri)
     }
 }
 

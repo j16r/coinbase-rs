@@ -3,13 +3,12 @@ use std::result;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use hmac::{Hmac, Mac};
-use sha2::Sha256;
-use http::{request, Request, Version, Method, Uri};
+use http::{request, Method, Request, Uri, Version};
 use hyper::Body;
+use sha2::Sha256;
 
 #[derive(Debug)]
-pub struct Error {
-}
+pub struct Error {}
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -30,19 +29,18 @@ pub struct Parts {
     pub headers: HashMap<String, String>,
 }
 
-
 #[derive(Clone, Debug, Default)]
 pub struct Builder {
     auth: Option<(String, String)>,
     parts: Parts,
-    body: Vec<u8>
+    body: Vec<u8>,
 }
 
 impl Builder {
     pub fn new() -> Builder {
         Builder {
             auth: None,
-            parts: Parts{
+            parts: Parts {
                 method: Method::GET,
                 uri: "/".parse().unwrap(),
                 version: Version::default(),
@@ -53,9 +51,9 @@ impl Builder {
     }
 
     pub fn new_with_auth(key: &str, secret: &str) -> Builder {
-        Builder{
+        Builder {
             auth: Some((key.to_string(), secret.to_string())),
-            parts: Parts{
+            parts: Parts {
                 method: Method::GET,
                 uri: "/".parse().unwrap(),
                 version: Version::default(),
@@ -113,7 +111,6 @@ impl Builder {
             self.clone()
                 .header("User-Agent", USER_AGENT)
                 .header("Content-Type", "Application/JSON")
-
                 .header("CB-VERSION", "2021-01-01")
                 .header("CB-ACCESS-KEY", key)
                 .header("CB-ACCESS-SIGN", &sign)
@@ -131,15 +128,8 @@ impl Builder {
         builder.body(_self.body.into()).unwrap()
     }
 
-    fn sign(
-        secret: &str,
-        timestamp: u64,
-        method: &Method,
-        path: &str,
-        body: &Vec<u8>,
-    ) -> String {
-        let mut mac: Hmac<Sha256> =
-            Hmac::new_varkey(secret.as_bytes()).expect("Hmac::new(secret)");
+    fn sign(secret: &str, timestamp: u64, method: &Method, path: &str, body: &Vec<u8>) -> String {
+        let mut mac: Hmac<Sha256> = Hmac::new_varkey(secret.as_bytes()).expect("Hmac::new(secret)");
         let input = timestamp.to_string() + method.as_str() + path;
         mac.input(input.as_bytes());
         mac.input(body);
