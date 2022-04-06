@@ -83,7 +83,8 @@ impl Public {
     /// https://developers.coinbase.com/api/v2#get-sell-price
     ///
     pub async fn sell_price(&self, currency_pair: &str) -> Result<CurrencyPrice> {
-        self.get(&format!("/v2/prices/{}/sell", currency_pair)).await
+        self.get(&format!("/v2/prices/{}/sell", currency_pair))
+            .await
     }
 
     ///
