@@ -1,4 +1,4 @@
-use coinbase_rs::{Private, MAIN_URL, Uuid};
+use coinbase_rs::{Private, Uuid, MAIN_URL};
 use futures::pin_mut;
 use futures::stream::StreamExt;
 use std::str::FromStr;

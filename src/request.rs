@@ -3,17 +3,16 @@ use std::result;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use hmac::{Hmac, Mac};
-use sha2::Sha256;
-use http::{request, Request, Version, Method, Uri};
+use http::{request, Method, Request, Uri, Version};
 use hyper::Body;
+use sha2::Sha256;
 
 #[derive(Debug)]
-pub struct Error {
-}
+pub struct Error {}
 
 pub type Result<T> = result::Result<T, Error>;
 
-const USER_AGENT: &'static str = concat!("coinbase-rs/", env!("CARGO_PKG_VERSION"));
+const USER_AGENT: &str = concat!("coinbase-rs/", env!("CARGO_PKG_VERSION"));
 
 #[derive(Clone, Debug, Default)]
 pub struct Parts {
@@ -30,19 +29,18 @@ pub struct Parts {
     pub headers: HashMap<String, String>,
 }
 
-
 #[derive(Clone, Debug, Default)]
 pub struct Builder {
     auth: Option<(String, String)>,
     parts: Parts,
-    body: Vec<u8>
+    body: Vec<u8>,
 }
 
 impl Builder {
     pub fn new() -> Builder {
         Builder {
             auth: None,
-            parts: Parts{
+            parts: Parts {
                 method: Method::GET,
                 uri: "/".parse().unwrap(),
                 version: Version::default(),
@@ -53,9 +51,9 @@ impl Builder {
     }
 
     pub fn new_with_auth(key: &str, secret: &str) -> Builder {
-        Builder{
+        Builder {
             auth: Some((key.to_string(), secret.to_string())),
-            parts: Parts{
+            parts: Parts {
                 method: Method::GET,
                 uri: "/".parse().unwrap(),
                 version: Version::default(),
@@ -66,31 +64,31 @@ impl Builder {
     }
 
     pub fn method(self, method: Method) -> Builder {
-        let mut _self = self.clone();
+        let mut _self = self;
         _self.parts.method = method;
         _self
     }
 
     pub fn uri(self, uri: Uri) -> Builder {
-        let mut _self = self.clone();
+        let mut _self = self;
         _self.parts.uri = uri;
         _self
     }
 
     pub fn version(self, version: Version) -> Builder {
-        let mut _self = self.clone();
+        let mut _self = self;
         _self.parts.version = version;
         _self
     }
 
     pub fn header(self, key: &str, value: &str) -> Builder {
-        let mut _self = self.clone();
+        let mut _self = self;
         _self.parts.headers.insert(key.into(), value.into());
         _self
     }
 
     pub fn body(self, body: &Vec<u8>) -> Builder {
-        let mut _self = self.clone();
+        let mut _self = self;
         _self.body = body.clone();
         _self
     }
@@ -103,23 +101,22 @@ impl Builder {
                 .as_secs();
 
             let sign = Self::sign(
-                &secret,
+                secret,
                 timestamp,
                 &self.parts.method,
-                &self.parts.uri.path_and_query().unwrap().as_str(),
+                self.parts.uri.path_and_query().unwrap().as_str(),
                 &self.body,
             );
 
             self.clone()
                 .header("User-Agent", USER_AGENT)
                 .header("Content-Type", "Application/JSON")
-
                 .header("CB-VERSION", "2021-01-01")
-                .header("CB-ACCESS-KEY", &key)
+                .header("CB-ACCESS-KEY", key)
                 .header("CB-ACCESS-SIGN", &sign)
                 .header("CB-ACCESS-TIMESTAMP", &timestamp.to_string())
         } else {
-            self.clone()
+            self
         };
 
         let mut builder = request::Builder::new()
@@ -131,15 +128,8 @@ impl Builder {
         builder.body(_self.body.into()).unwrap()
     }
 
-    fn sign(
-        secret: &str,
-        timestamp: u64,
-        method: &Method,
-        path: &str,
-        body: &Vec<u8>,
-    ) -> String {
-        let mut mac: Hmac<Sha256> =
-            Hmac::new_varkey(&secret.as_bytes()).expect("Hmac::new(secret)");
+    fn sign(secret: &str, timestamp: u64, method: &Method, path: &str, body: &Vec<u8>) -> String {
+        let mut mac: Hmac<Sha256> = Hmac::new_varkey(secret.as_bytes()).expect("Hmac::new(secret)");
         let input = timestamp.to_string() + method.as_str() + path;
         mac.input(input.as_bytes());
         mac.input(body);
