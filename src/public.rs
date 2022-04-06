@@ -5,11 +5,11 @@ use std::time::Duration;
 use async_stream::try_stream;
 use bigdecimal::BigDecimal;
 use futures::stream::Stream;
-use hyper::{Body, Client, client::HttpConnector, Uri};
+use hyper::{client::HttpConnector, Body, Client, Uri};
 use hyper_tls::HttpsConnector;
 use uritemplate::UriTemplate;
 
-use crate::{CBError, Result, request, DateTime};
+use crate::{request, CBError, DateTime, Result};
 
 pub struct Public {
     pub(crate) uri: String,
@@ -24,10 +24,7 @@ impl Public {
             .build::<_, Body>(https);
         let uri = uri.to_string();
 
-        Self {
-            uri,
-            client,
-        }
+        Self { uri, client }
     }
 
     ///
@@ -59,7 +56,7 @@ impl Public {
     ///
     pub async fn exchange_rates(&self, currency: &str) -> Result<ExchangeRates> {
         let uri = UriTemplate::new("/v2/exchange-rates{?query*}")
-            .set(&"currency", currency)
+            .set("currency", currency)
             .build();
         self.get(&uri).await
     }
@@ -72,8 +69,8 @@ impl Public {
     /// https://developers.coinbase.com/api/v2#get-buy-price
     ///
     pub async fn buy_price(&self, pair: &str) -> Result<CurrencyPrice> {
-        let uri = UriTemplate::new("/v2/currency_pair/{pair}")
-            .set(&"pair", pair)
+        let uri = UriTemplate::new("/v2/prices/{pair}")
+            .set("pair", pair)
             .build();
         self.get(&uri).await
     }
@@ -86,7 +83,7 @@ impl Public {
     /// https://developers.coinbase.com/api/v2#get-sell-price
     ///
     pub async fn sell_price(&self, currency_pair: &str) -> Result<CurrencyPrice> {
-        self.get(&format!("/v2/currency_pair/{}/sell", currency_pair)).await
+        self.get(&format!("/v2/prices/{}/sell", currency_pair)).await
     }
 
     ///
@@ -97,8 +94,13 @@ impl Public {
     ///
     /// https://developers.coinbase.com/api/v2#get-spot-price
     ///
-    pub async fn spot_price(&self, currency_pair: &str, _date: Option<chrono::NaiveDate>) -> Result<CurrencyPrice> {
-        self.get(&format!("/v2/currency_pair/{}/spot", currency_pair)).await
+    pub async fn spot_price(
+        &self,
+        currency_pair: &str,
+        _date: Option<chrono::NaiveDate>,
+    ) -> Result<CurrencyPrice> {
+        self.get(&format!("/v2/prices/{}/spot", currency_pair))
+            .await
     }
 
     ///
@@ -134,7 +136,10 @@ impl Public {
         }
     }
 
-    pub(crate) fn get_stream<'a, U>(&'a self, request: request::Builder) -> impl Stream<Item = Result<U>> + 'a
+    pub(crate) fn get_stream<'a, U>(
+        &'a self,
+        request: request::Builder,
+    ) -> impl Stream<Item = Result<U>> + 'a
     where
         U: Send + 'static,
         U: serde::de::DeserializeOwned,
@@ -167,7 +172,6 @@ impl Public {
         let uri: Uri = (self.uri.to_string() + uri).parse().unwrap();
         request::Builder::new().uri(uri)
     }
-
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -221,7 +225,7 @@ pub struct CurrencyPrice {
     pub currency: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct CurrentTime {
     iso: DateTime,
 }
@@ -293,7 +297,10 @@ mod test {
     "currency": "USD"
     }"#;
         let currency_price: CurrencyPrice = serde_json::from_slice(input.as_bytes()).unwrap();
-        assert_eq!(currency_price.amount, BigDecimal::from_f32(1010.25).unwrap());
+        assert_eq!(
+            currency_price.amount,
+            BigDecimal::from_f32(1010.25).unwrap()
+        );
         assert_eq!(currency_price.currency, "USD");
     }
 
