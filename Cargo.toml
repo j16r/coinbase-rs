@@ -15,7 +15,6 @@ async-stream = "*"
 base64 = "*"
 bigdecimal = { version = "*", features = [ "serde" ] }
 chrono = { version = "*", features = [ "serde" ] }
-failure = "*"
 futures = "*"
 hmac = "*"
 http = "*"
