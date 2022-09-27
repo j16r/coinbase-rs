@@ -11,22 +11,22 @@ categories = [ "api-bindings", "cryptography::cryptocurrencies" ]
 keywords = [ "exchange", "coinbase", "bitcoin" ]
 
 [dependencies]
-async-stream = "0.3"
-base64 = "0.13"
-bigdecimal = { version = "0.3", features = [ "serde" ] }
-chrono = { version = "0.4", features = [ "serde" ] }
-failure = "0.1"
-futures = "0.3"
-hmac = "0.12"
-http = "0.2"
-hyper = { version = "0.14", features = [ "full" ] }
-hyper-tls = "0.5"
-serde = "1"
-serde_derive = "1"
-serde_json = "1"
-sha2 = "0.10"
-thiserror = "1"
-tokio = { version = "1.5", features = [ "full" ] }
-tokio-stream = "0.1"
-uritemplate = "0.1.2"
-uuid = { version = "1", features = [ "serde", "v4" ] }
+async-stream = "*"
+base64 = "*"
+bigdecimal = { version = "*", features = [ "serde" ] }
+chrono = { version = "*", features = [ "serde" ] }
+failure = "*"
+futures = "*"
+hmac = "*"
+http = "*"
+hyper = { version = "*", features = [ "full" ] }
+hyper-tls = "*"
+serde = "*"
+serde_derive = "*"
+serde_json = "*"
+sha2 = "*"
+thiserror = "*"
+tokio = { version = "*", features = [ "full" ] }
+tokio-stream = "*"
+uritemplate = "*"
+uuid = { version = "*", features = [ "serde", "v4" ] }
