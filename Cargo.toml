@@ -28,5 +28,5 @@ sha2 = "*"
 thiserror = "*"
 tokio = { version = "*", features = [ "full" ] }
 tokio-stream = "*"
-uritemplate = "*"
+uritemplate-next = "*"
 uuid = { version = "*", features = [ "serde", "v4" ] }
