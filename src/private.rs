@@ -57,6 +57,24 @@ impl Private {
         self._pub.get_stream(request)
     }
 
+    ///
+    /// **List addresses**
+    ///
+    /// Lists addresses for an account.
+    ///
+    /// https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-addresses#list-addresses
+    ///
+    pub fn list_addresses<'a>(
+        &'a self,
+        account_id: &Uuid,
+    ) -> impl Stream<Item = Result<Vec<Address>>> + 'a {
+        let uri = UriTemplate::new("/v2/accounts/{account}/addresses")
+            .set("account", account_id.to_string())
+            .build();
+        let request = self.request(&uri);
+        self._pub.get_stream(request)
+    }
+
     fn request(&self, _uri: &str) -> request::Builder {
         let uri: Uri = (self._pub.uri.to_string() + _uri).parse().unwrap();
         request::Builder::new_with_auth(&self.key, &self.secret).uri(uri)
@@ -91,6 +109,18 @@ pub struct Account {
 pub struct Balance {
     pub amount: BigDecimal,
     pub currency: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Address {
+    pub id: String,
+    pub address: String,
+    pub name: Option<String>,
+    pub created_at: Option<DateTime>,
+    pub updated_at: Option<DateTime>,
+    pub network: String,
+    pub resource: String,
+    pub resource_path: String,
 }
 
 #[derive(Deserialize, Debug)]
