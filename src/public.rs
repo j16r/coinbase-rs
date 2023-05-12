@@ -55,7 +55,7 @@ impl Public {
     /// https://developers.coinbase.com/api/v2#exchange-rates
     ///
     pub async fn exchange_rates(&self, currency: &str) -> Result<ExchangeRates> {
-        let uri = UriTemplate::new("/v2/exchange-rates{?query*}")
+        let uri = UriTemplate::new("/v2/exchange-rates{?currency*}")
             .set("currency", currency)
             .build();
         self.get(&uri).await
