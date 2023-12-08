@@ -151,7 +151,7 @@ impl Public {
             let mut result = self.make_request(initial_request).await?;
             yield result.data;
 
-            while let(Some(ref next_uri)) = result.pagination.and_then(|p| p.next_uri) {
+            while let Some(ref next_uri) = result.pagination.and_then(|p| p.next_uri) {
                 let uri: Uri = (self.uri.to_string() + next_uri).parse().unwrap();
                 let request = request.clone().uri(uri);
                 result = self.make_request(request).await?;

@@ -132,10 +132,10 @@ impl Builder {
 
     fn sign(secret: &str, timestamp: u64, method: &Method, path: &str, body: &Vec<u8>) -> String {
         let mut mac: Hmac<Sha256> =
-            HmacSha256::new_from_slice(&secret.as_bytes()).expect("Hmac::new(secret)");
+            HmacSha256::new_varkey(&secret.as_bytes()).expect("Hmac::new(secret)");
         let input = timestamp.to_string() + method.as_str() + path;
-        mac.update(input.as_bytes());
-        mac.update(body);
-        format!("{:x}", &mac.finalize().into_bytes())
+        mac.input(input.as_bytes());
+        mac.input(body);
+        format!("{:x}", &mac.result().code())
     }
 }
