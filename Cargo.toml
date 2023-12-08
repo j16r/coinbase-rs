@@ -1,6 +1,6 @@
 [package]
 name = "coinbase-rs"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["John Barker <dev@j16r.net>"]
 edition = "2021"
 description = "Coinbase client for Rust"
